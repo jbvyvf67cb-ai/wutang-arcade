@@ -219,32 +219,31 @@ def build_all_clips(arm_obj):
     A.key("spine", 7, rot=(0.2, 0, 0))
     A.finish(a, 14)
 
-    # ---------- attack: claw, backhand, kick ----------
+    # ---------- attack: one BIG committed claw swipe ----------
     a = A.begin("attack")
-    # windup right
-    A.key("upper_arm.R", 3, rot=(-0.7, 0, 0.5))
-    A.key("spine", 3, rot=(0, -0.35, 0))
-    # swipe across
-    A.key("upper_arm.R", 7, rot=(1.4, 0, -0.6))
-    A.key("forearm.R", 7, rot=(0.3, 0, 0))
-    A.key("spine", 7, rot=(0.05, 0.4, 0))
-    # left backhand
-    A.key("upper_arm.L", 9, rot=(-0.7, 0, -0.5))
-    A.key("upper_arm.L", 13, rot=(1.4, 0, 0.6))
-    A.key("spine", 13, rot=(0.05, -0.4, 0))
-    A.key("upper_arm.R", 13, rot=(0.1, 0, 0))
-    # haymaker kick
-    A.key("thigh.R", 15, rot=(-0.5, 0, 0))
-    A.key("thigh.R", 18, rot=(1.7, 0, 0))
-    A.key("shin.R", 15, rot=(-1.2, 0, 0))
-    A.key("shin.R", 18, rot=(-0.1, 0, 0))
-    A.key("spine", 18, rot=(0.25, 0.1, 0))
-    A.key("upper_arm.L", 18, rot=(-0.6, 0, -0.6))
-    A.key("upper_arm.R", 18, rot=(-0.6, 0, 0.6))
+    # windup: arm cocked high behind, torso coiled
+    A.key("upper_arm.R", 2, rot=(-1.4, 0, 1.0))
+    A.key("forearm.R", 2, rot=(1.0, 0, 0))
+    A.key("spine", 2, rot=(0.05, -0.6, 0))
+    A.key("hips", 2, rot=(0, -0.25, 0))
+    A.key("head", 2, rot=(0, -0.3, 0))
+    A.key("upper_arm.L", 2, rot=(0.3, 0, -0.3))
+    # STRIKE: huge cross-body arc, claws leading, lunge into it
+    A.key("upper_arm.R", 5, rot=(2.0, 0, -1.0))
+    A.key("forearm.R", 5, rot=(0.1, 0, 0))
+    A.key("spine", 5, rot=(-0.2, 0.7, 0))
+    A.key("hips", 5, rot=(0, 0.3, 0))
+    A.key("head", 5, rot=(0.1, 0.35, 0))
+    A.key("upper_arm.L", 5, rot=(-0.6, 0, -0.6))
+    A.key("bowtie", 5, rot=(0, 0, 0.5))
+    # follow-through hold
+    A.key("upper_arm.R", 8, rot=(1.7, 0, -1.15))
+    A.key("spine", 8, rot=(-0.15, 0.55, 0))
+    A.key("bowtie", 8, rot=(0, 0, -0.3))
     # recover
-    for b in ("thigh.R", "shin.R", "spine", "upper_arm.L", "upper_arm.R", "forearm.R"):
-        A.key(b, 22, rot=(0, 0, 0))
-    A.finish(a, 22)
+    for b in ("upper_arm.R", "forearm.R", "spine", "hips", "head", "upper_arm.L", "bowtie"):
+        A.key(b, 14, rot=(0, 0, 0))
+    A.finish(a, 14)
 
     # ---------- hit react ----------
     a = A.begin("hit")

@@ -18,9 +18,9 @@ import { EnemySpawn } from "../level/layout";
 type Brain = "idle" | "patrol" | "aggro" | "telegraph" | "attack" | "recover" | "dead";
 
 const STATS = {
-  frat: { hp: 3, sight: 11, attackRange: 6, telegraph: 0.6, speed: 4.2, coins: 7 },
-  pirate: { hp: 5, sight: 10, attackRange: 2.6, telegraph: 0.75, speed: 2.8, coins: 12 },
-  huntress: { hp: 12, sight: 14, attackRange: 9, telegraph: 1.6, speed: 3.2, coins: 100 },
+  frat: { hp: 3, sight: 11, attackRange: 6, telegraph: 0.6, speed: 5.2, coins: 7 },
+  pirate: { hp: 5, sight: 10, attackRange: 2.8, telegraph: 0.75, speed: 3.4, coins: 12 },
+  huntress: { hp: 12, sight: 14, attackRange: 9, telegraph: 1.6, speed: 4.2, coins: 100 },
 } as const;
 
 const MAX_ACTIVE = 6; // mobile aggro cap
@@ -221,7 +221,7 @@ export class Enemy implements Hittable {
           if (this.kind === "frat") {
             this.timer = 0.55;
             const dir = toPlayer.normalize();
-            this.agg.body.setLinearVelocity(new Vector3(dir.x * 9, vel.y, dir.z * 9));
+            this.agg.body.setLinearVelocity(new Vector3(dir.x * 11, vel.y, dir.z * 11));
           } else if (this.kind === "pirate") {
             this.timer = 0.4;
           } else {

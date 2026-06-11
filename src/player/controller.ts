@@ -21,13 +21,13 @@ export type MoveState =
   | "ko"
   | "cutscene";
 
-const WALK_SPEED = 4.2;
-export const RUN_SPEED = 7.0;
-const SWIM_SPEED = 3.0;
-const JUMP_VELOCITY = 8.8;
-const DOUBLE_JUMP_VELOCITY = 7.6;
-const GROUND_ACCEL = 38;
-const AIR_ACCEL = 14;
+const WALK_SPEED = 5.4;
+export const RUN_SPEED = 9.5;
+const SWIM_SPEED = 4.2;
+const JUMP_VELOCITY = 9.2;
+const DOUBLE_JUMP_VELOCITY = 8.2;
+const GROUND_ACCEL = 58;
+const AIR_ACCEL = 20;
 const COYOTE = 0.12;
 const JUMP_BUFFER = 0.12;
 const CAPSULE_RADIUS = 0.45;

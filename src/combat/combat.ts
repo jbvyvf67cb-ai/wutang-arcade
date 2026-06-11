@@ -58,8 +58,38 @@ export class Combat {
     this.ring.setEnabled(false);
   }
 
+  private slashMesh: Mesh | null = null;
+  private slashAge = 99;
+
+  /** white claw-arc flash that sells the swipe */
+  private slashVfx(fwd: Vector3) {
+    if (!this.slashMesh) {
+      this.slashMesh = MeshBuilder.CreatePlane("slash", { width: 2.2, height: 1.0 }, this.scene);
+      const m = new StandardMaterial("slash_mat", this.scene);
+      m.emissiveColor = new Color3(1.0, 0.95, 0.8);
+      m.disableLighting = true;
+      m.backFaceCulling = false;
+      this.slashMesh.material = m;
+      this.slashMesh.setEnabled(false);
+    }
+    const p = this.player.position;
+    this.slashMesh.position.set(p.x + fwd.x * 1.4, p.y + 0.15, p.z + fwd.z * 1.4);
+    this.slashMesh.rotation.set(0.35, this.player.facing, (this.comboStage % 2 ? -1 : 1) * 0.7);
+    this.slashMesh.setEnabled(true);
+    this.slashAge = 0;
+  }
+
   update(dt: number, input: InputState) {
     this.comboCooldown = Math.max(0, this.comboCooldown - dt);
+
+    // slash flash fade
+    if (this.slashAge < 0.14 && this.slashMesh) {
+      this.slashAge += dt;
+      const t = this.slashAge / 0.14;
+      this.slashMesh.scaling.set(0.5 + t * 1.0, 1 - t * 0.5, 1);
+      (this.slashMesh.material as StandardMaterial).alpha = 0.85 * (1 - t);
+      if (this.slashAge >= 0.14) this.slashMesh.setEnabled(false);
+    }
 
     // ---- groove charging from movement + drain when still ----
     this.state.addGroove(this.player.groundTravel * GROOVE_RATE);
@@ -112,12 +142,19 @@ export class Combat {
 
   private clawAttack() {
     this.comboStage = (this.comboStage + 1) % 3;
-    this.comboCooldown = this.comboStage === 0 ? 0.55 : 0.32;
-    this.bear.oneShot("attack", 2.2);
+    this.comboCooldown = this.comboStage === 0 ? 0.45 : 0.3;
+    this.bear.oneShot("attack", 1.6);
     const v = this.player.aggregate.body.getLinearVelocity();
-    const speedBonus = Math.hypot(v.x, v.z) / 7; // sprint hits harder
+    const speedBonus = Math.hypot(v.x, v.z) / 9.5; // sprint hits harder
     const boost = this.state.fishbowlTimer > 0 ? 1.8 : 1.0;
     const fwd = new Vector3(Math.sin(this.player.facing), 0, Math.cos(this.player.facing));
+    // commit to the swipe: lunge forward
+    if (this.player.grounded) {
+      this.player.aggregate.body.setLinearVelocity(
+        new Vector3(v.x + fwd.x * 3.2, v.y, v.z + fwd.z * 3.2),
+      );
+    }
+    this.slashVfx(fwd);
     let landed = false;
     for (const h of this.hittables) {
       if (!h.alive) continue;

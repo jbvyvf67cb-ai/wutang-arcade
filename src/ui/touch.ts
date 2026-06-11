@@ -11,13 +11,14 @@ export function attachTouchControls(input: Input, state: GameState) {
     <style>
       #touch { position: fixed; inset: 0; z-index: 15; pointer-events: none;
                -webkit-user-select: none; user-select: none; }
-      #touch .stick-zone { position: absolute; left: 0; bottom: 0; width: 45vw; height: 55vh;
+      #touch .stick-zone { position: absolute; left: 0; bottom: 0; width: 45vw; height: 60vh;
                            pointer-events: auto; }
-      #touch .stick { position: absolute; width: 110px; height: 110px; border-radius: 50%;
-                      border: 2px solid rgba(255,255,255,.35); background: rgba(255,255,255,.08);
-                      display: none; }
-      #touch .nub { position: absolute; width: 48px; height: 48px; border-radius: 50%;
-                    background: rgba(255,255,255,.45); left: 31px; top: 31px; }
+      #touch .stick { position: absolute; width: 124px; height: 124px; border-radius: 50%;
+                      border: 2px solid rgba(255,255,255,.45); background: rgba(255,255,255,.10);
+                      left: 26px; bottom: calc(30px + env(safe-area-inset-bottom)); }
+      #touch .nub { position: absolute; width: 54px; height: 54px; border-radius: 50%;
+                    background: rgba(255,255,255,.55); left: 35px; top: 35px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,.4); }
       #touch .btn { position: absolute; border-radius: 50%; pointer-events: auto;
                     display: flex; align-items: center; justify-content: center;
                     font: 700 15px Georgia, serif; color: #fff;
@@ -55,37 +56,47 @@ export function attachTouchControls(input: Input, state: GameState) {
   let stickId: number | null = null;
   let cx = 0, cy = 0;
 
+  const resetStick = () => {
+    stickId = null;
+    nub.style.left = "35px";
+    nub.style.top = "35px";
+    input.touchMove = { x: 0, z: 0 };
+  };
+
   zone.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
     stickId = e.pointerId;
-    cx = e.clientX;
-    cy = e.clientY;
-    stick.style.display = "block";
-    stick.style.left = `${cx - 55}px`;
-    stick.style.top = `${cy - 55}px`;
-    zone.setPointerCapture(e.pointerId);
+    // the stick is fixed on screen; steer relative to its center wherever you touch
+    const r = stick.getBoundingClientRect();
+    cx = r.left + r.width / 2;
+    cy = r.top + r.height / 2;
+    // if the touch started far from the stick, treat the touch point as center
+    if (Math.hypot(e.clientX - cx, e.clientY - cy) > 110) {
+      cx = e.clientX;
+      cy = e.clientY;
+    }
     input.touchMove = { x: 0, z: 0 };
   });
-  zone.addEventListener("pointermove", (e) => {
+  // window-level tracking: iOS pointer capture is unreliable, and a finger
+  // drifting off the zone must NEVER leave stale movement applied
+  window.addEventListener("pointermove", (e) => {
     if (e.pointerId !== stickId) return;
     const dx = e.clientX - cx;
     const dy = e.clientY - cy;
     const len = Math.hypot(dx, dy);
-    const max = 52;
+    const max = 56;
     const k = len > max ? max / len : 1;
-    nub.style.left = `${31 + dx * k}px`;
-    nub.style.top = `${31 + dy * k}px`;
+    nub.style.left = `${35 + dx * k}px`;
+    nub.style.top = `${35 + dy * k}px`;
     input.touchMove = { x: (dx * k) / max, z: -(dy * k) / max };
   });
-  const endStick = (e: PointerEvent) => {
-    if (e.pointerId !== stickId) return;
-    stickId = null;
-    stick.style.display = "none";
-    nub.style.left = "31px";
-    nub.style.top = "31px";
-    input.touchMove = { x: 0, z: 0 };
-  };
-  zone.addEventListener("pointerup", endStick);
-  zone.addEventListener("pointercancel", endStick);
+  window.addEventListener("pointerup", (e) => {
+    if (e.pointerId === stickId) resetStick();
+  });
+  window.addEventListener("pointercancel", (e) => {
+    if (e.pointerId === stickId) resetStick();
+  });
+  window.addEventListener("blur", resetStick);
 
   const jump = root.querySelector(".jump") as HTMLButtonElement;
   jump.addEventListener("pointerdown", (e) => {

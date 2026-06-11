@@ -94,11 +94,11 @@ export class Bear {
       const vy = ctl.aggregate.body.getLinearVelocity().y;
       this.play("fall", true, vy > 0.5 ? 1.4 : 1.0);
       this.idleTime = 0;
-    } else if (horizSpeed > 5.2) {
-      this.play("run", true, Math.max(0.8, horizSpeed / 7));
+    } else if (horizSpeed > 6.2) {
+      this.play("run", true, Math.max(0.8, horizSpeed / 8.2));
       this.idleTime = 0;
     } else if (horizSpeed > 0.6) {
-      this.play("walk", true, Math.max(0.6, horizSpeed / 4.2));
+      this.play("walk", true, Math.max(0.7, horizSpeed / 4.6));
       this.idleTime = 0;
     } else {
       this.idleTime += dt;
