@@ -38,9 +38,9 @@ export const PIECES: PieceDef[] = [
     hint: "a stoop on Bourbon at St. Peter — watch for the frat pack" },
   { id: 4, name: "WONDER.", pos: [-138.5, 7.2, 103], crop: [0.3, 0.56, 0.95, 0.7],
     hint: "atop the diner sign, Bourbon & Dumaine — crates, balcony, jump" },
-  { id: 5, name: "Crow & Hat Man", pos: [30, 5.3, -64], crop: [0.0, 0.33, 0.33, 0.78],
-    hint: "the Pontalba gallery over St. Peter St — climb to the ironwork" },
-  { id: 6, name: "Flowers & Songbird", pos: [-86, 4.9, -88], crop: [0.08, 0.5, 0.42, 0.85],
+  { id: 5, name: "Crow & Hat Man", pos: [30, 5.4, -50.4], crop: [0.0, 0.33, 0.33, 0.78],
+    hint: "the Pontalba gallery overlooking Jackson Square — climb the ironwork" },
+  { id: 6, name: "Flowers & Songbird", pos: [-83, 4.9, -89], crop: [0.08, 0.5, 0.42, 0.85],
     hint: "a hanging basket over Royal Street — cross the balconies" },
   { id: 7, name: "Pin-up Lady", pos: [-41, 0.8, -27], crop: [0.55, 0.28, 1.0, 0.62],
     hint: "the Huntress keeps it — Pirate's Alley, beside the cathedral" },
@@ -127,7 +127,7 @@ export const COIN_TRAILS: CoinTrail[] = [
   { from: [152, -0.5, -20], to: [162, -0.5, 16], count: 12 },
   // balcony runs
   { from: [-88, 5.0, -110], to: [-88, 5.0, -70], count: 10 }, // Royal, piece 6 run
-  { from: [28, 5.0, -88], to: [28, 5.0, -58], count: 8 },     // Pontalba gallery
+  { from: [12, 5.0, -50.4], to: [52, 5.0, -50.4], count: 8 }, // Pontalba gallery
   { from: [-141, 5.0, 84], to: [-141, 5.0, 102], count: 6 },  // Clover approach
   // French Market arcade
   { from: [80, 0.6, 180], to: [92, 0.6, 220], count: 10 },
@@ -135,7 +135,7 @@ export const COIN_TRAILS: CoinTrail[] = [
 
 export const SECRETS = {
   pereAntoine: { pos: [-40, 0.6, -4] as [number, number, number], coins: 25 },
-  pontalbaGallery: { pos: [28, 5.0, -96] as [number, number, number], coins: 30 },
+  pontalbaGallery: { pos: [62, 5.0, -50.4] as [number, number, number], coins: 30 },
   riverSwim: { pos: [160, -0.5, -34] as [number, number, number], coins: 25 },
   cabrini: { pos: [-250, 0.6, 362] as [number, number, number], coins: 30 },
 };

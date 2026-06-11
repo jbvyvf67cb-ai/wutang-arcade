@@ -571,22 +571,31 @@ def main() -> None:
                 d = dist_pt_seg(c, line[i], line[i + 1])
                 if best is None or d < best[0]:
                     best = (d, name)
-        if best and best[0] < 30:
+        if best and best[0] < 34:
             pl = b["pts"]
             n = len(pl) // 2
-            # facade edge: footprint edge whose midpoint is closest to that street
-            be, bd = 0, 1e9
-            for i in range(n):
-                mx = (pl[2 * i] + pl[(2 * i + 2) % (2 * n)]) / 2
-                mz = (pl[2 * i + 1] + pl[(2 * i + 3) % (2 * n)]) / 2
-                for name, line in major_lines:
-                    if name != best[1]:
+            # facade edge: longest-ish edge whose midpoint is closest to that
+            # street (tiny corner edges must not win the storefront)
+            be, bd = -1, 1e9
+            for min_len in (3.5, 0.0):  # prefer real edges; fall back to any
+                for i in range(n):
+                    ex0, ez0 = pl[2 * i], pl[2 * i + 1]
+                    ex1, ez1 = pl[(2 * i + 2) % (2 * n)], pl[(2 * i + 3) % (2 * n)]
+                    if math.hypot(ex1 - ex0, ez1 - ez0) < min_len:
                         continue
-                    for j in range(len(line) - 1):
-                        d = dist_pt_seg((mx, mz), line[j], line[j + 1])
-                        if d < bd:
-                            bd, be = d, i
-            b["f"] = [be, best[1], round(best[0], 1)]
+                    mx, mz = (ex0 + ex1) / 2, (ez0 + ez1) / 2
+                    for name, line in major_lines:
+                        if name != best[1]:
+                            continue
+                        for j in range(len(line) - 1):
+                            d = dist_pt_seg((mx, mz), line[j], line[j + 1])
+                            if d < bd:
+                                bd, be = d, i
+                if be >= 0:
+                    break
+            # f[2] is the FRONT EDGE distance to the street (not centroid):
+            # deep lots still get storefronts and galleries
+            b["f"] = [max(0, be), best[1], round(bd, 1)]
 
     out = {
         "meta": {

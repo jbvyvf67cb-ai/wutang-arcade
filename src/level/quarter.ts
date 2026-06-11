@@ -295,6 +295,29 @@ export async function buildQuarter(scene: Scene): Promise<QuarterResult> {
     return lv * 3.4 + 0.6;
   };
 
+  // the Pontalbas front a side alley by the heuristic — force their famous
+  // square-facing long edges to count as fronts (facade detail + galleries)
+  const extraFronts = new Map<number, number>();
+  for (const pk of ["pontalba_upper", "pontalba_lower"]) {
+    const lm = lmByKey.get(pk);
+    if (!lm || lm.bld == null) continue;
+    const b = data.buildings[lm.bld];
+    const n = b.pts.length / 2;
+    let bestI = -1, bestScore = -Infinity;
+    for (let i = 0; i < n; i++) {
+      const x0 = b.pts[2 * i], z0 = b.pts[2 * i + 1];
+      const x1 = b.pts[(2 * i + 2) % (2 * n)], z1 = b.pts[(2 * i + 3) % (2 * n)];
+      const len = Math.hypot(x1 - x0, z1 - z0);
+      const d = Math.hypot((x0 + x1) / 2 - 33, (z0 + z1) / 2 + 9); // square center
+      const score = len - d * 0.8;
+      if (len > 12 && score > bestScore) {
+        bestScore = score;
+        bestI = i;
+      }
+    }
+    if (bestI >= 0) extraFronts.set(lm.bld, bestI);
+  }
+
   for (let bi = 0; bi < data.buildings.length; bi++) {
     if (interiorBlds.has(bi)) continue; // interiors get custom shells
     const b = data.buildings[bi];
@@ -309,6 +332,7 @@ export async function buildQuarter(scene: Scene): Promise<QuarterResult> {
     const vis = buf(b.c[0], b.c[1], "facade");
     const phys = buf(b.c[0], b.c[1], "phys");
     const frontEdge = b.f ? b.f[0] : -1;
+    const extraFront = extraFronts.get(bi) ?? -2;
 
     for (let i = 0; i < n; i++) {
       const x0 = b.pts[2 * i], z0 = b.pts[2 * i + 1];
@@ -319,7 +343,7 @@ export async function buildQuarter(scene: Scene): Promise<QuarterResult> {
       const A = new Vector3(x0, 0, z0), B = new Vector3(x1, 0, z1);
       const C = new Vector3(x1, h, z1), D = new Vector3(x0, h, z0);
       phys.quad(A, B, C, D, out, [0, 0, 1, 1], tint);
-      if (i === frontEdge && len > 3) {
+      if ((i === frontEdge || i === extraFront) && len > 3) {
         // storefront facade: subdivide into atlas-tile cells
         const cols = Math.max(1, Math.min(8, Math.round(len / 3.8)));
         const rows = Math.max(1, Math.min(4, Math.round(h / 3.6)));
@@ -355,20 +379,12 @@ export async function buildQuarter(scene: Scene): Promise<QuarterResult> {
   }
 
   // ---- balconies: iron galleries over the sidewalks of the gallery streets ----
-  for (let bi = 0; bi < data.buildings.length; bi++) {
-    const b = data.buildings[bi];
-    const key = lmByBld.get(bi);
-    const h = heroH(key, b.lv);
-    if (
-      !b.f || !BALCONY_STREETS.has(b.f[1]) || b.f[2] >= 16 || b.lv < 2 ||
-      h <= BALCONY_Y + 1.5 || (key && NO_BALCONY.has(key))
-    ) continue;
+  const addGallery = (b: QuarterData["buildings"][0], i: number) => {
     const n = b.pts.length / 2;
-    const i = b.f[0];
     const x0 = b.pts[2 * i], z0 = b.pts[2 * i + 1];
     const x1 = b.pts[(2 * i + 2) % (2 * n)], z1 = b.pts[(2 * i + 3) % (2 * n)];
     const len = Math.hypot(x1 - x0, z1 - z0);
-    if (len < 4) continue;
+    if (len < 4) return;
     const out = new Vector3((z1 - z0) / len, 0, -(x1 - x0) / len);
     const rotY = Math.atan2(x1 - x0, z1 - z0);
     const mid = new Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2);
@@ -397,6 +413,20 @@ export async function buildQuarter(scene: Scene): Promise<QuarterResult> {
       );
       ironBuf.box(new Vector3(pp.x, BALCONY_Y / 2, pp.z), [0.09, BALCONY_Y, 0.09], rotY, iuv, itint);
     }
+  };
+  for (let bi = 0; bi < data.buildings.length; bi++) {
+    const b = data.buildings[bi];
+    const key = lmByBld.get(bi);
+    const h = heroH(key, b.lv);
+    if (
+      !b.f || !BALCONY_STREETS.has(b.f[1]) || b.f[2] >= 16 || b.lv < 2 ||
+      h <= BALCONY_Y + 1.5 || (key && NO_BALCONY.has(key))
+    ) continue;
+    addGallery(b, b.f[0]);
+  }
+  // the Pontalbas' forced square-facing galleries
+  for (const [bi, edgeI] of extraFronts) {
+    addGallery(data.buildings[bi], edgeI);
   }
 
   // ---- streets: textured ribbons ----
@@ -855,6 +885,20 @@ export async function buildQuarter(scene: Scene): Promise<QuarterResult> {
     cannon.position = new Vector3(98, 3.0, -18);
     cannon.material = matIron;
     cannon.parent = root;
+    // Clover Grill corner sign — the piece-4 perch (crates -> balcony -> jump)
+    const grillPole = MeshBuilder.CreateBox("q_grill_pole", { width: 0.14, height: 7.2, depth: 0.14 }, scene);
+    grillPole.position = new Vector3(-138.5, 3.6, 103);
+    grillPole.material = matIron;
+    grillPole.parent = root;
+    const grillSign = MeshBuilder.CreateBox("q_grill_sign", { width: 2.4, height: 1.0, depth: 0.5 }, scene);
+    grillSign.position = new Vector3(-138.5, 6.6, 103);
+    const grillMat = new StandardMaterial("q_grillmat", scene);
+    grillMat.diffuseColor = new Color3(0.9, 0.12, 0.12);
+    grillMat.emissiveColor = new Color3(0.45, 0.06, 0.06);
+    grillSign.material = grillMat;
+    grillSign.parent = root;
+    new PhysicsAggregate(grillSign, PhysicsShapeType.BOX, { mass: 0 }, scene);
+
     // Moonwalk steps down to the river
     for (let s = 0; s < 4; s++) {
       const step = MeshBuilder.CreateBox(`q_moonwalk_${s}`, { width: 2.2, height: 0.5, depth: 26 }, scene);

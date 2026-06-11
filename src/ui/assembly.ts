@@ -127,12 +127,15 @@ export function showEndCard(stats: {
       <div class="quote">“Reality is merely another kind of wonder.”</div>
       <div class="attr">— Ram Dass</div>
       <div class="stats">
-        Time on Bourbon Street: ${stats.minutes.toFixed(1)} min<br/>
+        Time in the Quarter: ${stats.minutes.toFixed(1)} min<br/>
         Doubloons busked: ${stats.coins} &nbsp;·&nbsp; KOs survived: ${stats.kos}
-        &nbsp;·&nbsp; Secrets: ${stats.secrets}/3
+        &nbsp;·&nbsp; Secrets: ${stats.secrets}/4
       </div>
       <div class="rating">★ ${stats.rating} Flight Home ★</div>
       <button onclick="location.reload()">Wake up again</button>
+      <div style="position:absolute;bottom:12px;font-size:12px;opacity:.55">
+        Map data © OpenStreetMap contributors (ODbL)
+      </div>
     </div>
   `;
   document.body.appendChild(el);
