@@ -38,6 +38,11 @@ export class ChaseCamera {
     return this.camera.alpha + Math.PI / 2;
   }
 
+  private shake = 0;
+  addShake(s: number) {
+    this.shake = Math.min(1, this.shake + s);
+  }
+
   update(dt: number, input: InputState, playerMovingDir: { x: number; z: number } | null) {
     // manual orbit
     this.camera.alpha -= input.camDX;
@@ -52,8 +57,18 @@ export class ChaseCamera {
       this.camera.alpha += diff * Math.min(1, dt * 1.2);
     }
 
-    // smooth target follow
+    // smooth target follow (+ shake)
     const want = this.getTarget().add(new Vector3(0, 1.3, 0));
+    if (this.shake > 0.001) {
+      want.addInPlace(
+        new Vector3(
+          (Math.random() - 0.5) * this.shake * 0.7,
+          (Math.random() - 0.5) * this.shake * 0.5,
+          (Math.random() - 0.5) * this.shake * 0.7,
+        ),
+      );
+      this.shake *= Math.pow(0.03, dt);
+    }
     Vector3.LerpToRef(this.camera.target, want, Math.min(1, dt * 10), this.camera.target);
 
     // collision: shorten radius if a wall is between target and camera

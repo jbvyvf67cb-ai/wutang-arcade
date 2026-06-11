@@ -10,6 +10,10 @@ import { buildGraybox } from "./level/graybox";
 import { PlayerController } from "./player/controller";
 import { Bear } from "./player/bear";
 import { ChaseCamera } from "./core/camera";
+import { GameState } from "./game/state";
+import { Hud } from "./ui/hud";
+import { Collectibles } from "./game/collectibles";
+import { Combat } from "./combat/combat";
 import { attachDebug } from "./ui/debug";
 import { ZONES } from "./level/layout";
 
@@ -66,15 +70,57 @@ async function boot() {
   const input = new Input(canvas);
   const player = new PlayerController(scene, new Vector3(...ZONES.spawn));
   const camera = new ChaseCamera(scene, () => player.position);
+  const state = new GameState();
+  const hud = new Hud(state);
 
   const bear = await Bear.load(scene, player.visual);
   player.capsule.visibility = 0;
   bear.meshes.forEach((m) => shadows.addShadowCaster(m));
   player.onJump = () => bear.oneShot("jump", 1.4);
-  player.onDoubleJump = () => bear.oneShot("doublejump", 1.2);
+  player.onDoubleJump = () => {
+    bear.oneShot("doublejump", 1.2);
+    state.addGroove(0.04); // style bonus
+  };
   player.onLand = (impact) => {
     if (impact > 7) bear.oneShot("land", 1.3);
   };
+
+  const collectibles = new Collectibles(scene, state);
+  const combat = new Combat(scene, state, player, bear);
+  combat.dynamicBodies = level.dynamicProps
+    .map((m) => m.physicsBody)
+    .filter((b): b is NonNullable<typeof b> => !!b);
+  combat.onShake = (s) => camera.addShake(s);
+
+  // ---- KO: Sonic rule — coins spill everywhere, scramble to re-grab ----
+  state.on("ko", () => {
+    player.movementLocked = true;
+    bear.oneShot("ko", 1.0);
+    const spilled = state.spillCoins();
+    collectibles.spawnBurst(player.position, spilled);
+    camera.addShake(0.6);
+    hud.message("KO'd! Your doubloons!");
+    setTimeout(() => {
+      const z = player.position.z;
+      const respawn =
+        z < 70 ? new Vector3(7.5, 1.2, 8) : z < 156 ? new Vector3(7.5, 1.2, 90) : new Vector3(7.5, 1.2, 176);
+      player.teleport(respawn);
+      state.health = state.maxHealth;
+      state.emit("health");
+      player.movementLocked = false;
+      bear.interrupt();
+    }, 2400);
+  });
+
+  // ---- opening: wake up in the gutter ----
+  player.movementLocked = true;
+  bear.oneShot("wake", 1.0);
+  setTimeout(() => {
+    player.movementLocked = false;
+    bear.interrupt();
+    state.phase = "explore";
+    hud.message("Bourbon Street. 8:00 AM. Find the 8 collage pieces — and $500 for a flight home.", 6000);
+  }, 4200);
 
   setLoading(95, 4);
 
@@ -86,6 +132,8 @@ async function boot() {
     const v = player.aggregate.body.getLinearVelocity();
     const horizSpeed = Math.hypot(v.x, v.z);
     lastMoveDir = horizSpeed > 2 ? { x: v.x, z: v.z } : null;
+    combat.update(dt, input.state);
+    collectibles.update(dt, player.position);
     bear.updateLocomotion(dt, player, horizSpeed);
     camera.update(dt, input.state, lastMoveDir);
     input.consume();
