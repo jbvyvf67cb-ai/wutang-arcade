@@ -30,7 +30,7 @@ export interface PieceDef {
 }
 
 export const PIECES: PieceDef[] = [
-  { id: 1, name: "REALITY", pos: [87, 1.0, 33], crop: [0.05, 0.02, 0.97, 0.16],
+  { id: 1, name: "REALITY", pos: [88, 1.0, 47], crop: [0.05, 0.02, 0.97, 0.16],
     hint: "a café table under the green-striped awning — Café du Monde" },
   { id: 2, name: "IS MERELY", pos: [14, 2.0, -9], crop: [0.08, 0.17, 0.85, 0.28],
     hint: "the buskers' stage in front of the cathedral, Jackson Square" },
@@ -44,7 +44,7 @@ export const PIECES: PieceDef[] = [
     hint: "a hanging basket over Royal Street — cross the balconies" },
   { id: 7, name: "Pin-up Lady", pos: [-41, 0.8, -27], crop: [0.55, 0.28, 1.0, 0.62],
     hint: "the Huntress keeps it — Pirate's Alley, beside the cathedral" },
-  { id: 8, name: "Goldfish Bowl", pos: [-66, 1.2, -64], crop: [0.42, 0.6, 1.0, 0.95],
+  { id: 8, name: "Goldfish Bowl", pos: [-63, 1.2, -69], crop: [0.42, 0.6, 1.0, 0.95],
     hint: "inside the Royal St antiques shop — find a way through the roof" },
 ];
 
@@ -95,8 +95,8 @@ export interface ItemSpawn {
 }
 
 export const ITEMS: ItemSpawn[] = [
-  { kind: "beignet", pos: [84, 1.0, 38] },    // Café du Monde
-  { kind: "beignet", pos: [89, 1.0, 30] },    // Café du Monde
+  { kind: "beignet", pos: [85, 1.0, 48] },    // Café du Monde
+  { kind: "beignet", pos: [92, 1.0, 55] },    // Café du Monde
   { kind: "beignet", pos: [-45, 1.0, 250] },  // Croissant d'Or
   { kind: "beignet", pos: [-120, 1.0, -54] }, // outside Preservation Hall
   { kind: "beignet", pos: [-80, 1.0, 318] },  // Verti Marte (24h, of course)
@@ -163,7 +163,7 @@ export const CLIMB_SPOTS: Array<{ pos: [number, number, number]; kind: "crates" 
   { pos: [-141, 0, 92], kind: "crates" },   // piece 4: Clover Grill balcony route
   { pos: [24, 0, -52], kind: "van" },        // piece 5: Pontalba gallery route
   { pos: [-86, 0, -110], kind: "crates" },   // piece 6: Royal balcony run start
-  { pos: [-64, 0, -72], kind: "dumpster" },  // piece 8: M.S. Rau roof route
+  { pos: [-68, 0, -78], kind: "dumpster" },  // piece 8: M.S. Rau roof route
   { pos: [-150, 0, 154], kind: "crates" },   // spawn block: teach climbing
   { pos: [-148, 0, -310], kind: "dumpster" },// Lipstixx block balconies
 ];

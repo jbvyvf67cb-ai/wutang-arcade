@@ -263,9 +263,30 @@ export async function buildQuarter(scene: Scene): Promise<QuarterResult> {
     if (lm.bld !== null && !lmByBld.has(lm.bld)) lmByBld.set(lm.bld, lm.key);
   }
   const interiorBlds = new Set<number>();
+  const pointInPoly = (x: number, z: number, pts: number[]): boolean => {
+    let inside = false;
+    const n = pts.length / 2;
+    for (let i = 0, j = n - 1; i < n; j = i++) {
+      const xi = pts[2 * i], zi = pts[2 * i + 1];
+      const xj = pts[2 * j], zj = pts[2 * j + 1];
+      if (zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+    }
+    return inside;
+  };
   for (const idef of INTERIORS) {
     const lm = lmByKey.get(idef.key);
-    if (lm?.bld != null) interiorBlds.add(lm.bld);
+    if (lm?.bld == null) continue;
+    interiorBlds.add(lm.bld);
+    // OSM often stacks overlapping footprints; drop any building whose
+    // centroid sits inside this interior's footprint so the shell is hollow
+    const host = data.buildings[lm.bld];
+    for (let bi = 0; bi < data.buildings.length; bi++) {
+      if (bi === lm.bld) continue;
+      const c = data.buildings[bi].c;
+      if (Math.hypot(c[0] - host.c[0], c[1] - host.c[1]) < 40 && pointInPoly(c[0], c[1], host.pts)) {
+        interiorBlds.add(bi);
+      }
+    }
   }
 
   // ---- buildings -> chunked walls/roofs + physics + balconies ----
@@ -970,18 +991,26 @@ export async function buildQuarter(scene: Scene): Promise<QuarterResult> {
     }
     // roof (with skylight hole for the antiques heist)
     if (key === "ms_rau") {
-      // four slabs around a 2.6m skylight over the centroid
-      const hole = 2.6;
-      const ext = 14;
-      const slabs: Array<[number, number, number, number]> = [
-        [c.x - (hole / 2 + ext / 2), c.z, ext, ext * 2],
-        [c.x + (hole / 2 + ext / 2), c.z, ext, ext * 2],
-        [c.x, c.z - (hole / 2 + ext / 2), hole, ext],
-        [c.x, c.z + (hole / 2 + ext / 2), hole, ext],
-      ];
-      for (const [sx, sz, sw, sd] of slabs) {
-        shell.box(new Vector3(sx, wallH, sz), [sw, 0.3, sd], 0, [0.5, 0.5], [tint[0] * 0.5, tint[1] * 0.5, tint[2] * 0.5]);
+      // roof = footprint bbox minus a skylight hole at the centroid
+      const hole = 3.4;
+      let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+      for (let i = 0; i < n; i++) {
+        x0 = Math.min(x0, b.pts[2 * i]);
+        x1 = Math.max(x1, b.pts[2 * i]);
+        z0 = Math.min(z0, b.pts[2 * i + 1]);
+        z1 = Math.max(z1, b.pts[2 * i + 1]);
       }
+      const hx0 = c.x - hole / 2, hx1 = c.x + hole / 2;
+      const hz0 = c.z - hole / 2, hz1 = c.z + hole / 2;
+      const roofTint: [number, number, number] = [tint[0] * 0.5, tint[1] * 0.5, tint[2] * 0.5];
+      const slab = (sx0: number, sz0: number, sx1: number, sz1: number) => {
+        if (sx1 - sx0 < 0.1 || sz1 - sz0 < 0.1) return;
+        shell.box(new Vector3((sx0 + sx1) / 2, wallH, (sz0 + sz1) / 2), [sx1 - sx0, 0.3, sz1 - sz0], 0, [0.5, 0.5], roofTint);
+      };
+      slab(x0, z0, hx0, z1);          // west of the hole
+      slab(hx1, z0, x1, z1);          // east of the hole
+      slab(hx0, z0, hx1, hz0);        // strip toward Royal
+      slab(hx0, hz1, hx1, z1);        // strip toward the courtyard
     } else {
       for (let t = 0; t < b.tri.length; t += 3) {
         const v = (j: number) => new Vector3(b.pts[2 * b.tri[t + j]], wallH, b.pts[2 * b.tri[t + j] + 1]);
@@ -1079,7 +1108,7 @@ export async function buildQuarter(scene: Scene): Promise<QuarterResult> {
     if (idef.opens !== -1) {
       door = MeshBuilder.CreateBox(`q_door_${key}`, { width: 0.3, height: 3.0, depth: 2.4 }, scene);
       door.position = doorPos.add(new Vector3(0, 1.5, 0));
-      door.rotation.y = Math.atan2(fout.x, fout.z);
+      door.rotation.y = Math.atan2(fdir.x, fdir.z); // long axis along the wall gap
       door.material = matWood;
       door.parent = root;
       doorAgg = new PhysicsAggregate(door, PhysicsShapeType.BOX, { mass: 0 }, scene);
