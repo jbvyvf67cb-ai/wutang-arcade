@@ -1,0 +1,23 @@
+{
+  "name": "joshua-bourbon-street",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "qa": "playwright test --config qa/playwright/playwright.config.ts"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^8.0.0",
+    "@babylonjs/havok": "^1.3.10",
+    "@babylonjs/loaders": "^8.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0",
+    "vite-plugin-top-level-await": "^1.4.4"
+  }
+}

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#1a1410" />
+    <title>JOSHUA — A Bourbon Street Bear Tale</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #1a1410;
+        font-family: Georgia, "Times New Roman", serif;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      #game-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+        outline: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #loading {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(ellipse at 50% 40%, #3a2a1a 0%, #1a1410 70%);
+        color: #e8d5a3;
+        z-index: 100;
+        transition: opacity 0.6s;
+        text-align: center;
+        padding: 24px;
+      }
+      #loading h1 {
+        font-size: clamp(28px, 6vw, 52px);
+        letter-spacing: 0.12em;
+        margin: 0 0 6px;
+      }
+      #loading .sub {
+        font-style: italic;
+        opacity: 0.75;
+        margin-bottom: 28px;
+      }
+      #loading .bar {
+        width: min(70vw, 360px);
+        height: 8px;
+        border: 1px solid #e8d5a366;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      #loading .bar > div {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #c2452d, #e8a13a);
+        transition: width 0.3s;
+      }
+      #loading .tip {
+        margin-top: 22px;
+        font-size: 14px;
+        opacity: 0.6;
+        max-width: 420px;
+      }
+      #loading.done {
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loading">
+      <h1>JOSHUA</h1>
+      <div class="sub">A Bourbon Street Bear Tale</div>
+      <div class="bar"><div id="loading-fill"></div></div>
+      <div class="tip" id="loading-tip">Waking the bear…</div>
+    </div>
+    <canvas id="game-canvas"></canvas>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
