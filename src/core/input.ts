@@ -28,6 +28,10 @@ export class Input {
 
   private keys = new Set<string>();
   private dragging = false;
+  private dragStart: { x: number; y: number; t: number } | null = null;
+  private dragDist = 0;
+  /** -1/0/1 orbit intent from Q/E keys (camera applies with dt) */
+  orbitKeys = 0;
   /** External writers (touch UI) set these each frame instead of keys. */
   touchMove: { x: number; z: number } | null = null;
 
@@ -38,7 +42,6 @@ export class Input {
       if (e.code === "Space") this.state.jumpPressed = true;
       if (e.code === "KeyJ") this.state.attackPressed = true;
       if (e.code === "KeyK") this.state.specialPressed = true;
-      if (e.code === "KeyE") this.state.interactPressed = true;
       if (e.code === "KeyF") this.state.fishbowlPressed = true;
     });
     window.addEventListener("keyup", (e) => this.keys.delete(e.code));
@@ -47,14 +50,29 @@ export class Input {
     canvas.addEventListener("pointerdown", (e) => {
       if (e.pointerType === "mouse") {
         this.dragging = true;
-        if (e.button === 0) this.state.attackPressed = true;
+        this.dragStart = { x: e.clientX, y: e.clientY, t: performance.now() };
+        this.dragDist = 0;
         if (e.button === 2) this.state.specialPressed = true;
         canvas.setPointerCapture(e.pointerId);
       }
     });
-    canvas.addEventListener("pointerup", () => (this.dragging = false));
+    canvas.addEventListener("pointerup", (e) => {
+      // a left CLICK (no real drag) is an attack; a drag is camera orbit
+      if (
+        e.pointerType === "mouse" &&
+        e.button === 0 &&
+        this.dragStart &&
+        this.dragDist < 8 &&
+        performance.now() - this.dragStart.t < 400
+      ) {
+        this.state.attackPressed = true;
+      }
+      this.dragging = false;
+      this.dragStart = null;
+    });
     canvas.addEventListener("pointermove", (e) => {
       if (this.dragging || document.pointerLockElement === canvas) {
+        this.dragDist += Math.abs(e.movementX) + Math.abs(e.movementY);
         this.state.camDX += e.movementX * 0.005;
         this.state.camDY += e.movementY * 0.004;
       }
@@ -75,6 +93,7 @@ export class Input {
         (this.keys.has("KeyW") || this.keys.has("ArrowUp") ? 1 : 0) -
         (this.keys.has("KeyS") || this.keys.has("ArrowDown") ? 1 : 0);
     }
+    this.orbitKeys = (this.keys.has("KeyQ") ? -1 : 0) + (this.keys.has("KeyE") ? 1 : 0);
     this.state.jumpHeld = this.keys.has("Space") || this.touchJumpHeld;
   }
 

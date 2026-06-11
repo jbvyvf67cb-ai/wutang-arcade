@@ -172,6 +172,72 @@ test("G: full loop — 8 pieces, assembly, busking to $500, end card", async ({ 
   expect(finale.phase).toBe("win");
 });
 
+// ---- gameplay-feel gates (added after the first live playtest) ----
+
+test("FEEL: skeleton visibly animates while moving (no limp glide)", async ({ page }) => {
+  await boot(page);
+  await page.evaluate(() => window.__unlock());
+  await page.keyboard.down("KeyW");
+  await page.waitForTimeout(2000);
+  const sample = () =>
+    page.evaluate(() => {
+      const sk = window.__player.visual.getScene().skeletons[0];
+      const bone = sk.bones.find((b: any) => b.name.includes("thigh"));
+      const m = bone.getWorldMatrix().m;
+      return [m[5], m[6], m[9], m[13]];
+    });
+  const a = await sample();
+  await page.waitForTimeout(600);
+  const b = await sample();
+  await page.keyboard.up("KeyW");
+  const delta = a.reduce((s: number, v: number, i: number) => s + Math.abs(v - b[i]), 0);
+  expect(delta, "thigh bone did not move while running").toBeGreaterThan(0.01);
+  const playing = await page.evaluate(
+    () => window.__bear["current"]?.isPlaying && window.__bear["currentName"],
+  );
+  expect(["walk", "run"]).toContain(playing);
+});
+
+test("FEEL: camera auto-follows so you can always turn", async ({ page }) => {
+  await boot(page);
+  await page.evaluate(() => window.__unlock());
+  const a0 = await page.evaluate(() => window.__camera.camera.alpha);
+  await page.keyboard.down("KeyA"); // strafe -> camera should swing behind
+  await page.waitForTimeout(3500);
+  await page.keyboard.up("KeyA");
+  const a1 = await page.evaluate(() => window.__camera.camera.alpha);
+  expect(Math.abs(a1 - a0), "camera never followed the turn").toBeGreaterThan(0.25);
+});
+
+test("FEEL: kill plane — falling out of the world recovers in-bounds", async ({ page }) => {
+  await boot(page);
+  const r = await page.evaluate(async () => {
+    window.__unlock();
+    window.__state.addCoins(30);
+    const coinsBefore = window.__state.coins;
+    window.__tp(0, -30, 100);
+    await new Promise((res) => setTimeout(res, 3000));
+    return { y: window.__player.position.y, coins: window.__state.coins, coinsBefore };
+  });
+  expect(r.y).toBeGreaterThan(-2);
+  // falling off the map is not a KO — no coins lost (may even grab one where he lands)
+  expect(r.coins).toBeGreaterThanOrEqual(r.coinsBefore);
+});
+
+test("FEEL: Groove reaches full within 35s of running", async ({ page }) => {
+  await boot(page);
+  const m = await page.evaluate(() => window.__metrics);
+  const secondsToFull = 1 / (m.grooveRate * m.runSpeed);
+  expect(secondsToFull).toBeLessThanOrEqual(35);
+  // and it actually accrues from real movement
+  await page.evaluate(() => window.__unlock());
+  await page.keyboard.down("KeyW");
+  await page.waitForTimeout(3000);
+  await page.keyboard.up("KeyW");
+  const groove = await page.evaluate(() => window.__state.groove);
+  expect(groove).toBeGreaterThan(0.02);
+});
+
 test("E: perf telemetry + draw call budget", async ({ page }) => {
   await boot(page);
   await page.evaluate(() => {

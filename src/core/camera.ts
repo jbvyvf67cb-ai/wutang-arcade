@@ -43,18 +43,23 @@ export class ChaseCamera {
     this.shake = Math.min(1, this.shake + s);
   }
 
-  update(dt: number, input: InputState, playerMovingDir: { x: number; z: number } | null) {
-    // manual orbit
-    this.camera.alpha -= input.camDX;
+  update(
+    dt: number,
+    input: InputState,
+    playerMovingDir: { x: number; z: number } | null,
+    orbitKeys = 0,
+  ) {
+    // manual orbit (drag + Q/E)
+    this.camera.alpha -= input.camDX + orbitKeys * 2.4 * dt;
     this.camera.beta = Math.min(MAX_BETA, Math.max(MIN_BETA, this.camera.beta + input.camDY));
 
-    // lazy auto-follow: drift behind movement when the user isn't orbiting
-    if (playerMovingDir && Math.abs(input.camDX) < 0.0001) {
+    // auto-follow: swing behind the movement direction unless the user is orbiting
+    if (playerMovingDir && Math.abs(input.camDX) < 0.0001 && orbitKeys === 0) {
       const desiredAlpha = Math.atan2(playerMovingDir.z, playerMovingDir.x) + Math.PI;
       let diff = desiredAlpha - this.camera.alpha;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      this.camera.alpha += diff * Math.min(1, dt * 1.2);
+      this.camera.alpha += diff * Math.min(1, dt * 2.2);
     }
 
     // smooth target follow (+ shake)

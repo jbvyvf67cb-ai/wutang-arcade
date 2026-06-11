@@ -22,7 +22,7 @@ export type MoveState =
   | "cutscene";
 
 const WALK_SPEED = 4.2;
-const RUN_SPEED = 7.0;
+export const RUN_SPEED = 7.0;
 const SWIM_SPEED = 3.0;
 const JUMP_VELOCITY = 8.8;
 const DOUBLE_JUMP_VELOCITY = 7.6;

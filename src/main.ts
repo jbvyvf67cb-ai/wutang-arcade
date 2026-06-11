@@ -13,7 +13,8 @@ import { ChaseCamera } from "./core/camera";
 import { GameState } from "./game/state";
 import { Hud } from "./ui/hud";
 import { Collectibles } from "./game/collectibles";
-import { Combat } from "./combat/combat";
+import { Combat, GROOVE_RATE } from "./combat/combat";
+import { RUN_SPEED } from "./player/controller";
 import { AudioBus } from "./audio/audio";
 import { EnemyManager } from "./ai/enemies";
 import { ENEMIES, LAST_CALL, TICKET_PRICE } from "./level/layout";
@@ -255,7 +256,34 @@ async function boot() {
     bear.interrupt();
     state.phase = "explore";
     hud.message("Bourbon Street. 8:00 AM. Find the 8 collage pieces — and $500 for a flight home.", 6000);
+    setTimeout(() => {
+      if (ctx.isTouch) {
+        hud.message("Left stick: move · drag right side: camera · moving fills your GROOVE", 6000);
+      } else {
+        hud.message("WASD move · drag or Q/E: camera · Space jump ×2 · J or click: claw · moving fills your GROOVE", 7000);
+      }
+    }, 6500);
   }, 4200);
+
+  // first full Groove: teach the special
+  let grooveTaught = false;
+  state.on("groove", () => {
+    if (state.grooveReady && !grooveTaught) {
+      grooveTaught = true;
+      hud.message(ctx.isTouch ? "GROOVE FULL — hit DROP IT 💥" : "GROOVE FULL — press K to DROP IT LIKE IT'S HOT 💥", 6000);
+    }
+  });
+
+  // ---- kill plane: nothing falls forever on Bourbon Street ----
+  scene.onBeforeRenderObservable.add(() => {
+    if (player.position.y < -8) {
+      const z = player.position.z;
+      const respawn =
+        z < 70 ? new Vector3(7.5, 1.4, 8) : z < 156 ? new Vector3(7.5, 1.4, 90) : new Vector3(7.5, 1.4, 176);
+      player.teleport(respawn);
+      hud.message("Whoa — that's not Bourbon Street anymore. Back you go.");
+    }
+  });
 
   setLoading(95, 4);
 
@@ -267,7 +295,7 @@ async function boot() {
     player.update(dt, input.state, camera.yaw);
     const v = player.aggregate.body.getLinearVelocity();
     const horizSpeed = Math.hypot(v.x, v.z);
-    lastMoveDir = horizSpeed > 2 ? { x: v.x, z: v.z } : null;
+    lastMoveDir = horizSpeed > 0.8 ? { x: v.x, z: v.z } : null;
     hurtCooldown = Math.max(0, hurtCooldown - dt);
     combat.update(dt, input.state);
     collectibles.update(dt, player.position);
@@ -294,7 +322,7 @@ async function boot() {
       if (d < 6) startAssembly();
     }
     bear.updateLocomotion(dt, player, horizSpeed);
-    camera.update(dt, input.state, lastMoveDir);
+    camera.update(dt, input.state, lastMoveDir, input.orbitKeys);
     input.consume();
   });
 
@@ -343,6 +371,9 @@ async function boot() {
   w.__state = state;
   w.__enemies = enemyMgr;
   w.__combat = combat;
+  w.__camera = camera;
+  w.__bear = bear;
+  w.__metrics = { grooveRate: GROOVE_RATE, runSpeed: RUN_SPEED };
   w.__tp = (x: number, y: number, z: number) => {
     player.teleport(new Vector3(x, y, z));
   };

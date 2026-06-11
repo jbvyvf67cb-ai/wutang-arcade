@@ -116,7 +116,7 @@ export function attachTouchControls(input: Input, state: GameState) {
   let camId: number | null = null;
   let lx = 0, ly = 0;
   window.addEventListener("pointerdown", (e) => {
-    if (e.clientX > window.innerWidth * 0.45 && e.clientY < window.innerHeight * 0.55 && (e.target as HTMLElement).tagName === "CANVAS") {
+    if (e.clientX > window.innerWidth * 0.45 && (e.target as HTMLElement).tagName === "CANVAS") {
       camId = e.pointerId;
       lx = e.clientX;
       ly = e.clientY;

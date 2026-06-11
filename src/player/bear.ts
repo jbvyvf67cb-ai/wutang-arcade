@@ -1,4 +1,10 @@
-/** Loads Joshua and drives his animation state machine off the controller. */
+/** Loads Joshua and drives his animation state machine off the controller.
+ *
+ * Reliability rules (Safari/iOS got stuck poses with the fancy version):
+ * - No animation blending. Clips switch instantly.
+ * - One-shots end via onAnimationGroupEndObservable, not wall-clock math.
+ * - A watchdog restarts the intended clip if the engine ever drops it.
+ */
 import { Scene } from "@babylonjs/core/scene";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
@@ -18,8 +24,7 @@ export class Bear {
   private groups = new Map<string, AnimationGroup>();
   private current: AnimationGroup | null = null;
   private currentName = "";
-  /** one-shot lock: while set, locomotion can't override (attack/land/etc) */
-  private oneShotUntil = 0;
+  private oneShotActive = false;
   private idleTime = 0;
 
   static async load(scene: Scene, parent: TransformNode): Promise<Bear> {
@@ -33,48 +38,53 @@ export class Bear {
     }
     for (const g of result.animationGroups) {
       g.stop();
-      for (const ta of g.targetedAnimations) {
-        ta.animation.enableBlending = true;
-        ta.animation.blendingSpeed = 0.12;
-      }
       bear.groups.set(g.name, g);
     }
     return bear;
   }
 
   play(name: ClipName, loop = true, speed = 1, force = false) {
+    const g = this.groups.get(name);
+    if (!g) return;
     if (this.currentName === name && !force) {
-      if (this.current) this.current.speedRatio = speed;
+      g.speedRatio = speed;
+      // watchdog: if it silently stopped (platform hiccup, finished loop), restart
+      if (!g.isPlaying && loop) g.start(true, speed);
       return;
     }
     this.current?.stop();
-    const g = this.groups.get(name);
-    if (!g) return;
     g.start(loop, speed);
     this.current = g;
     this.currentName = name;
   }
 
-  /** plays a one-shot clip; locomotion resumes after its duration/speed */
-  oneShot(name: ClipName, speed = 1, now = performance.now()) {
+  /** plays a clip once; locomotion resumes when the group reports it ended */
+  oneShot(name: ClipName, speed = 1) {
     const g = this.groups.get(name);
     if (!g) return 0;
-    const durMs = ((g.to - g.from) / 24) * 1000 / speed;
-    this.play(name, false, speed, true);
-    this.oneShotUntil = now + durMs;
-    return durMs;
+    this.current?.stop();
+    this.oneShotActive = true;
+    g.start(false, speed);
+    this.current = g;
+    this.currentName = name;
+    g.onAnimationGroupEndObservable.addOnce(() => {
+      this.oneShotActive = false;
+    });
+    return (((g.to - g.from) / 24) * 1000) / speed;
   }
 
   get busy(): boolean {
-    return performance.now() < this.oneShotUntil;
+    return this.oneShotActive;
   }
 
-  /** clears the one-shot lock (e.g. interrupted) */
   interrupt() {
-    this.oneShotUntil = 0;
+    if (this.oneShotActive) {
+      this.current?.stop();
+      this.oneShotActive = false;
+      this.currentName = "";
+    }
   }
 
-  /** locomotion update: call every frame unless gameplay owns the pose */
   updateLocomotion(dt: number, ctl: PlayerController, horizSpeed: number) {
     if (this.busy) return;
     if (ctl.swimming) {
@@ -82,21 +92,17 @@ export class Bear {
       this.idleTime = 0;
     } else if (!ctl.grounded) {
       const vy = ctl.aggregate.body.getLinearVelocity().y;
-      this.play(vy > 0.5 ? "jump" : "fall", vy <= 0.5);
+      this.play("fall", true, vy > 0.5 ? 1.4 : 1.0);
       this.idleTime = 0;
     } else if (horizSpeed > 5.2) {
-      this.play("run", true, horizSpeed / 7);
+      this.play("run", true, Math.max(0.8, horizSpeed / 7));
       this.idleTime = 0;
     } else if (horizSpeed > 0.6) {
       this.play("walk", true, Math.max(0.6, horizSpeed / 4.2));
       this.idleTime = 0;
     } else {
       this.idleTime += dt;
-      if (this.idleTime > 20) {
-        if (this.currentName !== "idle_bored") this.play("idle_bored", true);
-      } else {
-        this.play("idle", true);
-      }
+      this.play(this.idleTime > 20 ? "idle_bored" : "idle", true);
     }
   }
 }

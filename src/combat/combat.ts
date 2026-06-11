@@ -19,8 +19,10 @@ export interface Hittable {
 }
 
 export const SHOCKWAVE_RADIUS = 8;
-const CLAW_RANGE = 2.1;
-const CLAW_ARC = 1.1; // radians half-angle
+/** groove per meter of ground travel — full charge ≈ 125m ≈ 18s of running */
+export const GROOVE_RATE = 0.008;
+const CLAW_RANGE = 2.4;
+const CLAW_ARC = 1.2; // radians half-angle
 
 export class Combat {
   hittables: Hittable[] = [];
@@ -60,7 +62,7 @@ export class Combat {
     this.comboCooldown = Math.max(0, this.comboCooldown - dt);
 
     // ---- groove charging from movement + drain when still ----
-    this.state.addGroove(this.player.groundTravel * 0.0023);
+    this.state.addGroove(this.player.groundTravel * GROOVE_RATE);
     if (this.player.groundTravel < 0.001) this.state.drainGroove(dt);
 
     // ---- fishbowl timer + helmet visual ----
@@ -129,6 +131,7 @@ export class Combat {
       h.hit(this.comboStage === 0 ? 2 : 1, impulse, this.comboStage === 0 || boost > 1);
       landed = true;
     }
+    if (landed) this.state.addGroove(0.05); // style: violence is also dancing
     this.onClawHit?.(landed);
   }
 

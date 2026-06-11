@@ -53,6 +53,11 @@ function makePalette(scene: Scene): Palette {
     water: mk("mat_water", new Color3(0.2, 0.35, 0.4), 0.1),
     prop: mk("mat_prop", new Color3(0.3, 0.35, 0.3), 0.6),
     lamp: mk("mat_lamp", new Color3(0.08, 0.08, 0.09), 0.4),
+    awning_r: mk("mat_awning_r", new Color3(0.55, 0.15, 0.17), 0.8),
+    awning_g: mk("mat_awning_g", new Color3(0.14, 0.32, 0.2), 0.8),
+    awning_b: mk("mat_awning_b", new Color3(0.17, 0.22, 0.43), 0.8),
+    hydrant: mk("mat_hydrant", new Color3(0.7, 0.12, 0.1), 0.5),
+    plant: mk("mat_plant", new Color3(0.16, 0.34, 0.14), 0.95),
   };
 }
 
@@ -73,7 +78,7 @@ export function buildGraybox(scene: Scene): GrayboxResult {
     pos: [number, number, number],
     size: [number, number, number],
     mat: PBRMaterial,
-    opts: { rotY?: number; faceUV?: Vector4[]; noMerge?: boolean } = {},
+    opts: { rotY?: number; faceUV?: Vector4[]; noMerge?: boolean; invisible?: boolean } = {},
   ): Mesh => {
     const m = MeshBuilder.CreateBox(
       name,
@@ -85,8 +90,9 @@ export function buildGraybox(scene: Scene): GrayboxResult {
     m.material = mat;
     m.receiveShadows = true;
     m.parent = root;
+    if (opts.invisible) m.isVisible = false;
     new PhysicsAggregate(m, PhysicsShapeType.BOX, { mass: 0, friction: 0.8, restitution: 0 }, scene);
-    if (!opts.noMerge) {
+    if (!opts.noMerge && !opts.invisible) {
       const g = mergeGroups.get(mat) ?? [];
       g.push(m);
       mergeGroups.set(mat, g);
@@ -94,6 +100,24 @@ export function buildGraybox(scene: Scene): GrayboxResult {
     return m;
   };
   const B = staticBox;
+  /** decorative only: no physics, merged for draw calls */
+  const deco = (
+    name: string,
+    pos: [number, number, number],
+    size: [number, number, number],
+    mat: PBRMaterial,
+    rotY = 0,
+  ): Mesh => {
+    const m = MeshBuilder.CreateBox(name, { width: size[0], height: size[1], depth: size[2] }, scene);
+    m.position = new Vector3(...pos);
+    if (rotY) m.rotation.y = rotY;
+    m.material = mat;
+    m.parent = root;
+    const g = mergeGroups.get(mat) ?? [];
+    g.push(m);
+    mergeGroups.set(mat, g);
+    return m;
+  };
 
   const L = STREET.length;
 
@@ -338,6 +362,90 @@ export function buildGraybox(scene: Scene): GrayboxResult {
   B("barrier_s", [0, 1, 242], [20, 2, 1], P.barrier);
   B("wall_corner_a", [0, 5, -3.5], [22, 10, 1], P.facade);
   B("wall_corner_b", [0, 5, 243.5], [22, 10, 1], P.facade);
+
+  // ---- containment: invisible walls so nothing leaves the level, ever ----
+  B("contain_e", [21, 15, 120], [1, 30, 270], P.facade, { invisible: true });
+  B("contain_w", [-21, 15, 70], [1, 30, 170], P.facade, { invisible: true }); // up to the alley
+  B("contain_w2", [-21, 15, 200], [1, 30, 90], P.facade, { invisible: true });
+  B("contain_alley_w", [-44, 15, 148], [1, 30, 24], P.facade, { invisible: true });
+  B("contain_alley_n", [-32, 15, 158.5], [26, 30, 1], P.facade, { invisible: true });
+  B("contain_alley_s", [-32, 15, 137.5], [26, 30, 1], P.facade, { invisible: true });
+  B("contain_n", [0, 15, -5.5], [44, 30, 1], P.facade, { invisible: true });
+  B("contain_s", [0, 15, 245.5], [44, 30, 1], P.facade, { invisible: true });
+  // full-height walls over the jumpable cross-street barriers
+  B("contain_crossA_e", [19.6, 8, 78], [0.6, 14, 16], P.facade, { invisible: true });
+  B("contain_crossA_w", [-19.6, 8, 78], [0.6, 14, 16], P.facade, { invisible: true });
+  B("contain_crossB_e", [19.6, 8, 164], [0.6, 14, 16], P.facade, { invisible: true });
+  B("contain_crossB_w", [-19.6, 8, 164], [0.6, 14, 16], P.facade, { invisible: true });
+
+  // ---- street furniture & dressing ----
+  // gallery support poles at the curb under every balcony
+  const poleRuns: Array<[number, number, number]> = [
+    [6.9, 44, 62], [-6.9, 124, 134], [-6.9, 140, 150], [6.9, 118, 132], [-6.9, 206, 216], [-6.9, 188, 200],
+  ];
+  for (const [px, z0, z1] of poleRuns) {
+    for (let z = z0 + 1; z < z1; z += 4) {
+      deco(`gpole_${px}_${z}`, [px, STREET.balconyY / 2, z], [0.09, STREET.balconyY, 0.09], P.balcony);
+    }
+    // hanging ferns under the balcony lip
+    for (let z = z0 + 2; z < z1; z += 5) {
+      deco(`fern_${px}_${z}`, [px * 1.06, STREET.balconyY - 0.35, z], [0.5, 0.45, 0.5], P.plant);
+    }
+  }
+  // striped awnings over storefronts (alternating colors, both sides)
+  const awningMats = [P.awning_r, P.awning_g, P.awning_b];
+  let ai = 0;
+  for (const seg of segments) {
+    for (const side of seg.sides) {
+      const sx = side === "e" ? 1 : -1;
+      for (let z = seg.z0 + 6; z < seg.z1 - 4; z += 13 + (ai % 3) * 4) {
+        // skip where balconies already shade the sidewalk
+        const shaded = poleRuns.some(([px, z0, z1]) => Math.sign(px) === sx && z > z0 - 2 && z < z1 + 2);
+        if (!shaded) {
+          deco(`awning_${side}_${z}`, [sx * 8.9, 3.05, z], [2.0, 0.16, 4.6], awningMats[ai % 3]);
+          deco(`awning_f_${side}_${z}`, [sx * 7.95, 2.9, z], [0.14, 0.5, 4.6], awningMats[ai % 3]);
+        }
+        ai++;
+      }
+    }
+  }
+  // hydrants + planters
+  for (const [hx, hz] of [[6.6, 24], [-6.6, 102], [6.6, 158], [-6.6, 226]] as Array<[number, number]>) {
+    deco(`hydrant_${hz}`, [hx, 0.5, hz], [0.34, 0.7, 0.34], P.hydrant);
+    deco(`hydrant_cap_${hz}`, [hx, 0.95, hz], [0.2, 0.18, 0.2], P.hydrant);
+  }
+  for (const [pxx, pz] of [[7.4, 42], [-7.4, 66], [7.4, 142], [-7.4, 182], [7.4, 208]] as Array<[number, number]>) {
+    deco(`planter_${pz}`, [pxx, 0.35, pz], [0.9, 0.7, 0.9], P.crate);
+    deco(`bush_${pz}`, [pxx, 0.95, pz], [0.85, 0.6, 0.85], P.plant);
+  }
+  // parapet trims along rooflines facing the street
+  for (const seg of segments) {
+    for (const side of seg.sides) {
+      const sx = side === "e" ? 1 : -1;
+      deco(`parapet_${side}_${seg.z0}`, [sx * 10.1, 8.2, (seg.z0 + seg.z1) / 2], [0.25, 0.5, seg.z1 - seg.z0 - 0.5], P.facade, 0);
+    }
+  }
+
+  // street-name blades at the intersections
+  const blade = (tex: string, pos: [number, number, number], rotY: number) => {
+    const plane = MeshBuilder.CreatePlane(`blade_${tex}_${pos[2]}`, { width: 1.7, height: 0.32 }, scene);
+    plane.position = new Vector3(...pos);
+    plane.rotation.y = rotY;
+    const mat = new StandardMaterial(`blademat_${tex}_${pos[2]}`, scene);
+    const t = new Texture(`./textures/${tex}`, scene);
+    mat.diffuseTexture = t;
+    mat.emissiveTexture = t;
+    mat.emissiveColor = new Color3(0.5, 0.5, 0.5);
+    mat.specularColor = Color3.Black();
+    mat.backFaceCulling = false;
+    plane.material = mat;
+    plane.parent = root;
+  };
+  for (const [z, cross] of [[70.5, "street_stpeter.png"], [156.5, "street_orleans.png"]] as Array<[number, string]>) {
+    deco(`signpole_${z}`, [6.4, 1.7, z], [0.1, 3.4, 0.1], P.lamp);
+    blade("street_bourbon.png", [6.4, 3.1, z], 0);
+    blade(cross, [6.4, 2.75, z], Math.PI / 2);
+  }
 
   // ---- dynamic props ----
   const dynamicProps: Mesh[] = [];
