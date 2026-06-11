@@ -16,7 +16,10 @@ import { Collectibles } from "./game/collectibles";
 import { Combat } from "./combat/combat";
 import { AudioBus } from "./audio/audio";
 import { EnemyManager } from "./ai/enemies";
-import { ENEMIES, LAST_CALL } from "./level/layout";
+import { ENEMIES, LAST_CALL, TICKET_PRICE } from "./level/layout";
+import { AssemblyMinigame, showEndCard } from "./ui/assembly";
+import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
+import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { attachDebug } from "./ui/debug";
 import { ZONES } from "./level/layout";
 
@@ -95,6 +98,12 @@ async function boot() {
 
   const audio = new AudioBus();
   audio.load("shriek", "./audio/huntress_shriek.wav");
+  for (const m of [
+    "block1_gutter_blues", "block2_tiger_rag", "alley_st_james",
+    "block3_saints", "assembly_entertainer",
+  ]) {
+    audio.load(m, `./audio/music/${m}.mp3`);
+  }
   state.on("coins", () => audio.coin());
   state.on("piece", () => audio.pickup());
   player.onJump = () => {
@@ -150,6 +159,67 @@ async function boot() {
       hud.message("8/8! Last call gauntlet — get to Lipstixx!", 5000);
     }
   });
+
+  // antiques shop door unlocks once the goldfish bowl (piece 8) is lifted
+  collectibles.onPieceCollected = (def) => {
+    if (def.id === 8) {
+      level.lockedDoor.physicsBody?.dispose();
+      level.lockedDoor.dispose();
+      hud.message("The shop door clicks open behind you.");
+    }
+  };
+
+  // ---- assembly spot: chalk rectangle in front of Lipstixx ----
+  const chalk = MeshBuilder.CreateGround("chalk", { width: 2.6, height: 3.4 }, scene);
+  chalk.position = new Vector3(...ZONES.assemblySpot);
+  chalk.position.y = 0.16;
+  const chalkMat = new StandardMaterial("chalkmat", scene);
+  chalkMat.diffuseColor = new Color3(0.9, 0.9, 0.85);
+  chalkMat.emissiveColor = new Color3(0.25, 0.25, 0.22);
+  chalkMat.alpha = 0.35;
+  chalk.material = chalkMat;
+
+  let finaleStarted = false;
+  const startAssembly = () => {
+    if (finaleStarted) return;
+    finaleStarted = true;
+    state.phase = "assembly";
+    player.movementLocked = true;
+    audio.playMusic("assembly_entertainer");
+    const game = new AssemblyMinigame();
+    game.onSnap = (n) => audio.pickup();
+    game.onComplete = () => {
+      // ---- busking finale: the crowd pays for the flight ----
+      state.phase = "win";
+      bear.oneShot("victory", 1.0);
+      hud.message("The morning crowd gathers…", 4000);
+      audio.playMusic("block3_saints");
+      let shower = 0;
+      const interval = setInterval(() => {
+        shower++;
+        collectibles.spawnBurst(player.position.add(new Vector3((Math.random() - 0.5) * 4, 2, (Math.random() - 0.5) * 4)), 6);
+        state.addCoins(Math.ceil((TICKET_PRICE - state.coins) / Math.max(1, 10 - shower)));
+        camera.addShake(0.06);
+        if (state.coins >= TICKET_PRICE || shower > 14) {
+          clearInterval(interval);
+          state.coins = Math.max(state.coins, TICKET_PRICE);
+          state.emit("coins");
+          bear.play("dance", true);
+          setTimeout(() => {
+            showEndCard({
+              minutes: (performance.now() - state.startTime) / 60000,
+              coins: state.coins,
+              kos: state.kos,
+              secrets: state.secretsFound.size,
+              rating: state.styleRating(),
+            });
+            state.emit("win");
+          }, 2600);
+        }
+      }, 700);
+    };
+    game.open();
+  };
   combat.dynamicBodies = level.dynamicProps
     .map((m) => m.physicsBody)
     .filter((b): b is NonNullable<typeof b> => !!b);
@@ -189,6 +259,7 @@ async function boot() {
   setLoading(95, 4);
 
   let lastMoveDir: { x: number; z: number } | null = null;
+  let wasSwimming = false;
   scene.onBeforeRenderObservable.add(() => {
     const dt = Math.min(engine.getDeltaTime() / 1000, 0.2);
     input.poll();
@@ -200,6 +271,27 @@ async function boot() {
     combat.update(dt, input.state);
     collectibles.update(dt, player.position);
     enemyMgr.update(dt);
+
+    // music zones
+    if (state.phase !== "assembly" && state.phase !== "win") {
+      const p = player.position;
+      const zone =
+        p.x < -12 ? "alley_st_james"
+        : p.z < 70 ? "block1_gutter_blues"
+        : p.z < 156 ? "block2_tiger_rag"
+        : "block3_saints";
+      audio.playMusic(zone);
+    }
+
+    // swim splash on entry
+    if (player.swimming && !wasSwimming) audio.splash();
+    wasSwimming = player.swimming;
+
+    // assembly trigger
+    if (state.phase === "lastcall" && !finaleStarted) {
+      const d = Vector3.DistanceSquared(player.position, new Vector3(...ZONES.assemblySpot));
+      if (d < 6) startAssembly();
+    }
     bear.updateLocomotion(dt, player, horizSpeed);
     camera.update(dt, input.state, lastMoveDir);
     input.consume();

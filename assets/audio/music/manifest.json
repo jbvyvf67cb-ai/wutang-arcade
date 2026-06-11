@@ -1,0 +1,37 @@
+{
+  "block1_gutter_blues": {
+    "title": "Gutter Sunrise Blues",
+    "composer": "original (this project)",
+    "year": 2026,
+    "pd_basis": "original work",
+    "loop_seconds": 45.0
+  },
+  "block2_tiger_rag": {
+    "title": "Tiger Rag",
+    "composer": "Original Dixieland Jass Band",
+    "year": 1917,
+    "pd_basis": "composition pre-1931; rendition ours",
+    "loop_seconds": 19.2
+  },
+  "alley_st_james": {
+    "title": "St. James Infirmary",
+    "composer": "traditional",
+    "year": "pre-1925",
+    "pd_basis": "traditional; rendition ours",
+    "loop_seconds": 44.65
+  },
+  "block3_saints": {
+    "title": "When the Saints Go Marching In",
+    "composer": "traditional",
+    "year": "pre-1900",
+    "pd_basis": "traditional; rendition ours",
+    "loop_seconds": 23.27
+  },
+  "assembly_entertainer": {
+    "title": "The Entertainer",
+    "composer": "Scott Joplin",
+    "year": 1902,
+    "pd_basis": "composition PD (Joplin d. 1917); rendition ours",
+    "loop_seconds": 41.74
+  }
+}
