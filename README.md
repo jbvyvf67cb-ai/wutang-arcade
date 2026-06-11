@@ -52,6 +52,17 @@ past the Moonwalk (swimmable).
 Navigation: the minimap (top right) rotates with the camera; the orange
 chevron points at the nearest missing collage piece, with a hint underneath.
 
+## Group updates — request a change
+
+Anyone can change the game: drop a plain-text request into
+**`updates/queue/`** and push. Four times a day (8 AM / 2 PM / 8 PM /
+midnight US Central) a scheduled Claude routine implements the queued
+requests, verifies the build, publishes to the live URL, and archives each
+request with a summary in `updates/processed/`. See
+[`updates/README.md`](updates/README.md) for the format and
+`.github/workflows/group-updates.yml` for the schedule. (Requires the
+`ANTHROPIC_API_KEY` repository secret.)
+
 ## Tech
 
 - **Babylon.js 8** + **Havok (WASM)** physics — real rigidbody character
