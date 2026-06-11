@@ -8,6 +8,7 @@ import { createGameContext } from "./core/setup";
 import { Input } from "./core/input";
 import { buildGraybox } from "./level/graybox";
 import { PlayerController } from "./player/controller";
+import { Bear } from "./player/bear";
 import { ChaseCamera } from "./core/camera";
 import { attachDebug } from "./ui/debug";
 import { ZONES } from "./level/layout";
@@ -64,8 +65,16 @@ async function boot() {
   setLoading(75, 3);
   const input = new Input(canvas);
   const player = new PlayerController(scene, new Vector3(...ZONES.spawn));
-  shadows.addShadowCaster(player.capsule);
   const camera = new ChaseCamera(scene, () => player.position);
+
+  const bear = await Bear.load(scene, player.visual);
+  player.capsule.visibility = 0;
+  bear.meshes.forEach((m) => shadows.addShadowCaster(m));
+  player.onJump = () => bear.oneShot("jump", 1.4);
+  player.onDoubleJump = () => bear.oneShot("doublejump", 1.2);
+  player.onLand = (impact) => {
+    if (impact > 7) bear.oneShot("land", 1.3);
+  };
 
   setLoading(95, 4);
 
@@ -75,8 +84,9 @@ async function boot() {
     input.poll();
     player.update(dt, input.state, camera.yaw);
     const v = player.aggregate.body.getLinearVelocity();
-    lastMoveDir =
-      Math.hypot(v.x, v.z) > 2 ? { x: v.x, z: v.z } : null;
+    const horizSpeed = Math.hypot(v.x, v.z);
+    lastMoveDir = horizSpeed > 2 ? { x: v.x, z: v.z } : null;
+    bear.updateLocomotion(dt, player, horizSpeed);
     camera.update(dt, input.state, lastMoveDir);
     input.consume();
   });
