@@ -31,6 +31,12 @@ function setLoading(pct: number, tipIndex?: number) {
 
 async function boot() {
   const canvas = document.getElementById("game-canvas") as HTMLCanvasElement;
+  const viewerModel = new URLSearchParams(location.search).get("viewer");
+  if (viewerModel) {
+    const { bootViewer } = await import("./viewer");
+    await bootViewer(canvas, viewerModel);
+    return;
+  }
   setLoading(10, 0);
 
   const ctx = await createGameContext(canvas);
