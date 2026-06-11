@@ -65,6 +65,11 @@ async function boot() {
   shadows.usePercentageCloserFiltering = tier === "high";
   shadows.bias = 0.002;
 
+  // warm 8am haze down the street
+  scene.fogMode = 2; // EXP2
+  scene.fogDensity = 0.0055;
+  scene.fogColor = new Color3(0.82, 0.78, 0.72);
+
   setLoading(55, 2);
   const level = buildGraybox(scene);
   level.dynamicProps.forEach((p) => shadows.addShadowCaster(p));
