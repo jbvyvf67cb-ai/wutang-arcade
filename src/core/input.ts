@@ -2,12 +2,15 @@
 export interface InputState {
   moveX: number; // -1..1 strafe intent (camera-relative)
   moveZ: number; // -1..1 forward intent
+  /** touch joystick tank mode: turn (-1..1) + forward/back (-1..1, analog) */
+  tank: { turn: number; fwd: number } | null;
   jumpHeld: boolean;
   jumpPressed: boolean; // edge, consumed each frame
   attackPressed: boolean;
   specialPressed: boolean;
   interactPressed: boolean;
   fishbowlPressed: boolean;
+  recenterPressed: boolean; // snap the camera back behind Joshua
   camDX: number; // accumulated orbit deltas, consumed each frame
   camDY: number;
 }
@@ -16,12 +19,14 @@ export class Input {
   state: InputState = {
     moveX: 0,
     moveZ: 0,
+    tank: null,
     jumpHeld: false,
     jumpPressed: false,
     attackPressed: false,
     specialPressed: false,
     interactPressed: false,
     fishbowlPressed: false,
+    recenterPressed: false,
     camDX: 0,
     camDY: 0,
   };
@@ -32,8 +37,8 @@ export class Input {
   private dragDist = 0;
   /** -1/0/1 orbit intent from Q/E keys (camera applies with dt) */
   orbitKeys = 0;
-  /** External writers (touch UI) set these each frame instead of keys. */
-  touchMove: { x: number; z: number } | null = null;
+  /** External writers (touch UI) set these instead of keys. */
+  touchTank: { turn: number; fwd: number } | null = null;
 
   constructor(private canvas: HTMLCanvasElement) {
     window.addEventListener("keydown", (e) => {
@@ -43,6 +48,7 @@ export class Input {
       if (e.code === "KeyJ") this.state.attackPressed = true;
       if (e.code === "KeyK") this.state.specialPressed = true;
       if (e.code === "KeyF") this.state.fishbowlPressed = true;
+      if (e.code === "KeyC") this.state.recenterPressed = true;
     });
     window.addEventListener("keyup", (e) => this.keys.delete(e.code));
     window.addEventListener("blur", () => this.keys.clear());
@@ -82,17 +88,13 @@ export class Input {
 
   /** Call once per frame before systems read, after they read call consume(). */
   poll() {
-    if (this.touchMove) {
-      this.state.moveX = this.touchMove.x;
-      this.state.moveZ = this.touchMove.z;
-    } else {
-      this.state.moveX =
-        (this.keys.has("KeyD") || this.keys.has("ArrowRight") ? 1 : 0) -
-        (this.keys.has("KeyA") || this.keys.has("ArrowLeft") ? 1 : 0);
-      this.state.moveZ =
-        (this.keys.has("KeyW") || this.keys.has("ArrowUp") ? 1 : 0) -
-        (this.keys.has("KeyS") || this.keys.has("ArrowDown") ? 1 : 0);
-    }
+    this.state.tank = this.touchTank;
+    this.state.moveX =
+      (this.keys.has("KeyD") || this.keys.has("ArrowRight") ? 1 : 0) -
+      (this.keys.has("KeyA") || this.keys.has("ArrowLeft") ? 1 : 0);
+    this.state.moveZ =
+      (this.keys.has("KeyW") || this.keys.has("ArrowUp") ? 1 : 0) -
+      (this.keys.has("KeyS") || this.keys.has("ArrowDown") ? 1 : 0);
     this.orbitKeys = (this.keys.has("KeyQ") ? -1 : 0) + (this.keys.has("KeyE") ? 1 : 0);
     this.state.jumpHeld = this.keys.has("Space") || this.touchJumpHeld;
   }
@@ -105,6 +107,7 @@ export class Input {
     this.state.specialPressed = false;
     this.state.interactPressed = false;
     this.state.fishbowlPressed = false;
+    this.state.recenterPressed = false;
     this.state.camDX = 0;
     this.state.camDY = 0;
   }

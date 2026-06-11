@@ -293,9 +293,9 @@ async function boot() {
     hud.message("The French Quarter. 8:00 AM. 8 collage pieces, $500, one flight home.", 6000);
     setTimeout(() => {
       if (ctx.isTouch) {
-        hud.message("Left stick: move · drag right: camera · follow the orange compass chevron", 6000);
+        hud.message("Stick: ←→ turn, ↑↓ walk (further = faster) · ⌖ re-centers the camera", 6500);
       } else {
-        hud.message("WASD move · Space jump ×2 · J claw · K Groove · follow the orange compass chevron", 7000);
+        hud.message("WASD move · Space jump ×2 · J claw · K Groove · C re-centers the camera", 7000);
       }
     }, 6500);
   }, 4200);
@@ -319,7 +319,6 @@ async function boot() {
 
   setLoading(95, 4);
 
-  let lastMoveDir: { x: number; z: number } | null = null;
   let wasSwimming = false;
   let openIdx = 0;
   scene.onBeforeRenderObservable.add(() => {
@@ -341,7 +340,6 @@ async function boot() {
 
     const v = player.aggregate.body.getLinearVelocity();
     const horizSpeed = Math.hypot(v.x, v.z);
-    lastMoveDir = horizSpeed > 0.8 ? { x: v.x, z: v.z } : null;
     hurtCooldown = Math.max(0, hurtCooldown - dt);
     combat.update(dt, input.state);
     collectibles.update(dt, player.position);
@@ -388,7 +386,7 @@ async function boot() {
       const p = player.position;
       const nearJackson = Math.hypot(p.x - 25, p.z + 10) < 75;
       const zone =
-        Math.hypot(p.x + 41, p.z + 27) < 30 ? "alley_st_james" // the Huntress' alley
+        Math.hypot(p.x + 41, p.z + 24) < 30 ? "alley_st_james" // the Huntress' alley
         : nearJackson ? "assembly_entertainer"
         : p.x > 95 ? "block3_saints" // the river
         : p.x < -120 ? "block2_tiger_rag" // Bourbon
@@ -405,8 +403,13 @@ async function boot() {
       const d = Vector3.DistanceSquared(player.position, new Vector3(...ZONES.assemblySpot));
       if (d < 6) startAssembly();
     }
-    bear.updateLocomotion(dt, player, horizSpeed);
-    camera.update(dt, input.state, lastMoveDir, input.orbitKeys);
+    // turning in place still reads as walking, not a statue pivot
+    const animSpeed = Math.max(
+      horizSpeed,
+      player.grounded && !player.swimming ? Math.abs(player.turnInput) * 2.4 : 0,
+    );
+    bear.updateLocomotion(dt, player, animSpeed);
+    camera.update(dt, input.state, player.facing, input.orbitKeys);
     input.consume();
   });
 
@@ -458,6 +461,8 @@ async function boot() {
   w.__camera = camera;
   w.__bear = bear;
   w.__time = time;
+  w.__audio = audio;
+  w.__input = input;
   w.__landmarks = level.landmarkMarkers;
   w.__interiors = level.interiors.map((i) => ({
     key: i.def.key, label: i.def.label, isOpen: () => i.isOpen,

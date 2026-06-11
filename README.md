@@ -42,8 +42,9 @@ past the Moonwalk (swimmable).
 
 | | Desktop | Touch |
 |---|---|---|
-| Move | WASD / arrows | left virtual stick |
-| Camera | mouse drag | drag right side |
+| Move | WASD / arrows (camera-relative) | stick: ←→ turn Joshua, ↑↓ walk — analog, jog at full deflection |
+| Camera | mouse drag (follows behind Joshua otherwise) | drag right side |
+| Re-center camera behind Joshua | C | ⌖ |
 | Jump / double jump | Space | JUMP |
 | Claw combo | J / left click | CLAW |
 | Drop It Like It's Hot | K / right click (full Groove) | pulsing DROP IT |
@@ -98,7 +99,7 @@ pip install bpy numpy mido lameenc pillow
 python3 tools/map/fetch_osm.py             # refresh raw OSM data (network)
 python3 tools/map/build_map.py             # rebuild assets/map/quarter.json
 python3 tools/character/build_joshua.py    # the bear
-python3 tools/character/humanoid.py        # frat boy, pirate, the Huntress
+python3 tools/character/humanoid.py        # pleat (frat boy), pirate, the Huntress
 python3 tools/textures/make_textures.py    # facade atlas, signs, road
 python3 tools/audio/make_shriek.py         # "I AM THE HUNTRESS..."
 python3 tools/audio/make_music.py          # the 5 jazz loops (needs fluidsynth + FluidR3_GM)

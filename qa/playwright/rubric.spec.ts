@@ -155,7 +155,7 @@ test("D+F: shockwave ragdolls the Bourbon frat pack with real impulses", async (
   await boot(page);
   await page.evaluate(() => {
     window.__unlock();
-    window.__tp(-143, 1.2, -53); // middle of the Cat's Meow pack
+    window.__tp(-146.5, 1.2, -54); // middle of the Cat's Meow pack
   });
   await page.waitForTimeout(2500);
   const before = await page.evaluate(
@@ -237,7 +237,7 @@ test("G: full loop — 8 pieces, assembly, busking to $500, end card", async ({ 
     if (await page.evaluate(() => window.__state.pieces.size >= 7)) break;
   }
   // piece 7: drop it on the Huntress in Pirate's Alley until she falls
-  await page.evaluate(() => window.__tp(-41, 1.2, -28));
+  await page.evaluate(() => window.__tp(-41, 1.2, -23));
   await page.waitForTimeout(1500);
   for (let i = 0; i < 5; i++) {
     await page.evaluate(() => window.__combat["executeDrop"]());
@@ -249,7 +249,7 @@ test("G: full loop — 8 pieces, assembly, busking to $500, end card", async ({ 
   );
   expect(huntressDead).toBe(true);
   for (let attempt = 0; attempt < 6; attempt++) {
-    await page.evaluate(() => window.__tp(-41, 1.2, -27));
+    await page.evaluate(() => window.__tp(-38, 1.2, -24));
     await page.waitForTimeout(900);
     if (await page.evaluate(() => window.__state.pieces.size >= 8)) break;
   }

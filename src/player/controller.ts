@@ -23,6 +23,8 @@ export type MoveState =
 
 const WALK_SPEED = 5.4;
 export const RUN_SPEED = 9.5;
+const MIN_WALK_SPEED = 2.0; // smallest analog deflection still moves
+const TURN_RATE = 2.9; // rad/s at full stick deflection (tank mode)
 const SWIM_SPEED = 4.2;
 const JUMP_VELOCITY = 9.2;
 const DOUBLE_JUMP_VELOCITY = 8.2;
@@ -47,6 +49,8 @@ export class PlayerController {
   groundTravel = 0;
   /** set true while dance/drop/cutscene animations own movement */
   movementLocked = false;
+  /** tank-mode turn input this frame (-1..1) — drives the walk anim in place */
+  turnInput = 0;
 
   private vyExtra = 0;
   private coyoteTimer = 0;
@@ -144,26 +148,45 @@ export class PlayerController {
       return;
     }
 
-    // ---- desired horizontal velocity, camera-relative ----
-    const ix = input.moveX;
-    const iz = input.moveZ;
-    const mag = Math.min(1, Math.hypot(ix, iz));
+    // ---- desired horizontal velocity ----
+    // Touch joystick = tank controls: stick X turns Joshua, stick Y moves
+    // along his facing (analog: deflection sets speed, walk -> jog at the rim).
+    // Keyboard = camera-relative WASD, as before.
+    let mag = 0;
     let wishX = 0;
     let wishZ = 0;
-    if (mag > 0.01) {
-      const ang = camYaw + Math.atan2(ix, iz);
-      wishX = Math.sin(ang) * mag;
-      wishZ = Math.cos(ang) * mag;
-      this.facing = ang;
+    this.turnInput = 0;
+    if (input.tank) {
+      const turn = Math.abs(input.tank.turn) > 0.12 ? input.tank.turn : 0;
+      this.facing += turn * TURN_RATE * dt;
+      this.turnInput = turn;
+      const f = Math.abs(input.tank.fwd) > 0.12 ? input.tank.fwd : 0;
+      mag = Math.min(1, Math.abs(f));
+      if (mag > 0) {
+        const s = Math.sign(f); // negative = back up, still facing forward
+        wishX = Math.sin(this.facing) * s;
+        wishZ = Math.cos(this.facing) * s;
+      }
+    } else {
+      const ix = input.moveX;
+      const iz = input.moveZ;
+      mag = Math.min(1, Math.hypot(ix, iz));
+      if (mag > 0.01) {
+        const ang = camYaw + Math.atan2(ix, iz);
+        wishX = Math.sin(ang);
+        wishZ = Math.cos(ang);
+        this.facing = ang;
+      }
     }
+    // analog speed: deflection scales walk -> jog, capped at the rim
     const maxSpeed = this.swimming
-      ? SWIM_SPEED
-      : mag > 0.65
+      ? SWIM_SPEED * Math.max(mag, 0.6)
+      : mag >= 0.97
         ? RUN_SPEED
-        : WALK_SPEED;
+        : MIN_WALK_SPEED + (WALK_SPEED + 1.6 - MIN_WALK_SPEED) * mag;
     const accel = this.swimming ? 16 : this.grounded ? GROUND_ACCEL : AIR_ACCEL;
-    const targetX = wishX * maxSpeed;
-    const targetZ = wishZ * maxSpeed;
+    const targetX = wishX * (mag > 0 ? maxSpeed : 0);
+    const targetZ = wishZ * (mag > 0 ? maxSpeed : 0);
     let vx = vel.x + Math.max(-accel * dt, Math.min(accel * dt, targetX - vel.x));
     let vz = vel.z + Math.max(-accel * dt, Math.min(accel * dt, targetZ - vel.z));
     let vy = vel.y;

@@ -24,9 +24,22 @@ export class AudioBus {
       this.ctx.resume();
       window.dispatchEvent(new Event("audio-unlocked"));
     };
-    for (const ev of ["pointerdown", "keydown", "touchstart"]) {
-      window.addEventListener(ev, unlock, { once: false, passive: true });
+    // iOS: contexts also get suspended/interrupted (backgrounding, ringer
+    // switch quirks) — re-resume on every interaction, forever
+    const keepAlive = () => {
+      unlock();
+      if (this.ctx && this.ctx.state !== "running") {
+        this.ctx.resume().catch(() => undefined);
+      }
+    };
+    for (const ev of ["pointerdown", "pointerup", "keydown", "touchstart", "touchend"]) {
+      window.addEventListener(ev, keepAlive, { once: false, passive: true });
     }
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && this.ctx && this.ctx.state !== "running") {
+        this.ctx.resume().catch(() => undefined);
+      }
+    });
   }
 
   async load(name: string, url: string) {

@@ -45,25 +45,41 @@ export class ChaseCamera {
 
   /** screenshot/debug: stop following and park the camera explicitly */
   freeze = false;
+  /** true after the user orbits manually; recenter (C / ⌖) returns to auto */
+  manual = false;
+  private snap = 0;
 
   update(
     dt: number,
     input: InputState,
-    playerMovingDir: { x: number; z: number } | null,
+    playerFacing: number,
     orbitKeys = 0,
   ) {
     if (this.freeze) return;
-    // manual orbit (drag + Q/E)
+    // manual orbit (drag + Q/E) takes the camera out of auto-follow
+    if (Math.abs(input.camDX) > 0.012 || Math.abs(input.camDY) > 0.012 || orbitKeys !== 0) {
+      this.manual = true;
+    }
     this.camera.alpha -= input.camDX + orbitKeys * 2.4 * dt;
     this.camera.beta = Math.min(MAX_BETA, Math.max(MIN_BETA, this.camera.beta + input.camDY));
 
-    // auto-follow: swing behind the movement direction unless the user is orbiting
-    if (playerMovingDir && Math.abs(input.camDX) < 0.0001 && orbitKeys === 0) {
-      const desiredAlpha = Math.atan2(playerMovingDir.z, playerMovingDir.x) + Math.PI;
+    // recenter: snap back behind Joshua and resume following
+    if (input.recenterPressed) {
+      this.manual = false;
+      this.snap = 1;
+    }
+    this.snap = Math.max(0, this.snap - dt * 1.2);
+
+    // auto-follow: stay behind Joshua's facing (camera forward = his forward)
+    if (!this.manual) {
+      const desiredAlpha = playerFacing - Math.PI / 2;
       let diff = desiredAlpha - this.camera.alpha;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      this.camera.alpha += diff * Math.min(1, dt * 2.2);
+      this.camera.alpha += diff * Math.min(1, dt * (2.4 + this.snap * 10));
+      if (this.snap > 0) {
+        this.camera.beta += (1.15 - this.camera.beta) * Math.min(1, dt * 6);
+      }
     }
 
     // smooth target follow (+ shake)

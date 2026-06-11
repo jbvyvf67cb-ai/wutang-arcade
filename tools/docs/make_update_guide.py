@@ -301,7 +301,7 @@ def build():
         P("Screenshots from the live game — name these places in your requests.", "body"),
         Spacer(1, 4),
         shot("bourbon_dusk.png", 5.4 * inch),
-        P("Bourbon Street at dusk — frat-boy packs, iron galleries, and the travel agency selling the "
+        P("Bourbon Street at dusk — packs of pleats (the frat boys), iron galleries, and the travel agency selling the "
           "$500 flight home (next door to Lipstixx, where the finale happens).", "caption"),
         shot("cafe_du_monde.png", 5.4 * inch),
         P("Café du Monde — green-striped canopy, marble tables, beignets that heal Joshua's bow tie, "

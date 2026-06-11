@@ -12,10 +12,11 @@ export function attachTouchControls(input: Input, state: GameState) {
       #touch { position: fixed; inset: 0; z-index: 15; pointer-events: none;
                -webkit-user-select: none; user-select: none; }
       #touch .stick-zone { position: absolute; left: 0; bottom: 0; width: 45vw; height: 60vh;
-                           pointer-events: auto; }
+                           pointer-events: auto; touch-action: none; }
       #touch .stick { position: absolute; width: 124px; height: 124px; border-radius: 50%;
                       border: 2px solid rgba(255,255,255,.45); background: rgba(255,255,255,.10);
-                      left: 26px; bottom: calc(30px + env(safe-area-inset-bottom)); }
+                      left: 26px; bottom: calc(30px + env(safe-area-inset-bottom));
+                      touch-action: none; }
       #touch .nub { position: absolute; width: 54px; height: 54px; border-radius: 50%;
                     background: rgba(255,255,255,.55); left: 35px; top: 35px;
                     box-shadow: 0 2px 8px rgba(0,0,0,.4); }
@@ -29,6 +30,8 @@ export function attachTouchControls(input: Input, state: GameState) {
                      bottom: calc(110px + env(safe-area-inset-bottom)); }
       #touch .atk  { width: 64px; height: 64px; right: 110px;
                      bottom: calc(40px + env(safe-area-inset-bottom)); }
+      #touch .recenter { width: 56px; height: 56px; right: 30px;
+                     bottom: calc(290px + env(safe-area-inset-bottom)); font-size: 24px; }
       #touch .fish { width: 56px; height: 56px; right: 30px;
                      bottom: calc(210px + env(safe-area-inset-bottom)); display: none; }
       #touch .groove-btn { position: absolute; left: 50%; transform: translateX(-50%);
@@ -45,6 +48,7 @@ export function attachTouchControls(input: Input, state: GameState) {
     <div class="stick-zone"><div class="stick"><div class="nub"></div></div></div>
     <button class="btn jump">JUMP</button>
     <button class="btn atk">CLAW</button>
+    <button class="btn recenter">⌖</button>
     <button class="btn fish">🐠</button>
     <button class="btn groove-btn">DROP<br/>IT</button>
   `;
@@ -60,7 +64,19 @@ export function attachTouchControls(input: Input, state: GameState) {
     stickId = null;
     nub.style.left = "35px";
     nub.style.top = "35px";
-    input.touchMove = { x: 0, z: 0 };
+    input.touchTank = null;
+  };
+
+  // tank controls: stick X turns Joshua, stick Y walks forward/backward.
+  // Deflection is analog (walk → jog) and CLAMPED to the circle edge, so a
+  // finger past the rim is exactly "edge", never a release.
+  const applyStick = (dxRaw: number, dyRaw: number) => {
+    const len = Math.hypot(dxRaw, dyRaw);
+    const max = 56;
+    const k = len > max ? max / len : 1;
+    nub.style.left = `${35 + dxRaw * k}px`;
+    nub.style.top = `${35 + dyRaw * k}px`;
+    input.touchTank = { turn: (dxRaw * k) / max, fwd: -(dyRaw * k) / max };
   };
 
   zone.addEventListener("pointerdown", (e) => {
@@ -75,21 +91,15 @@ export function attachTouchControls(input: Input, state: GameState) {
       cx = e.clientX;
       cy = e.clientY;
     }
-    input.touchMove = { x: 0, z: 0 };
+    input.touchTank = { turn: 0, fwd: 0 };
   });
   // window-level tracking: iOS pointer capture is unreliable, and a finger
   // drifting off the zone must NEVER leave stale movement applied
   window.addEventListener("pointermove", (e) => {
     if (e.pointerId !== stickId) return;
-    const dx = e.clientX - cx;
-    const dy = e.clientY - cy;
-    const len = Math.hypot(dx, dy);
-    const max = 56;
-    const k = len > max ? max / len : 1;
-    nub.style.left = `${35 + dx * k}px`;
-    nub.style.top = `${35 + dy * k}px`;
-    input.touchMove = { x: (dx * k) / max, z: -(dy * k) / max };
-  });
+    e.preventDefault();
+    applyStick(e.clientX - cx, e.clientY - cy);
+  }, { passive: false });
   window.addEventListener("pointerup", (e) => {
     if (e.pointerId === stickId) resetStick();
   });
@@ -110,6 +120,11 @@ export function attachTouchControls(input: Input, state: GameState) {
   (root.querySelector(".atk") as HTMLButtonElement).addEventListener("pointerdown", (e) => {
     e.preventDefault();
     input.state.attackPressed = true;
+  });
+
+  (root.querySelector(".recenter") as HTMLButtonElement).addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    input.state.recenterPressed = true;
   });
 
   const fish = root.querySelector(".fish") as HTMLButtonElement;

@@ -35,14 +35,14 @@ export const PIECES: PieceDef[] = [
   { id: 2, name: "IS MERELY", pos: [14, 2.0, -9], crop: [0.08, 0.17, 0.85, 0.28],
     hint: "the buskers' stage in front of the cathedral, Jackson Square" },
   { id: 3, name: "ANOTHER KIND OF", pos: [-142, 1.0, -52], crop: [0.05, 0.3, 0.72, 0.44],
-    hint: "a stoop on Bourbon at St. Peter — watch for the frat pack" },
+    hint: "a stoop on Bourbon at St. Peter — watch for the pleat pack" },
   { id: 4, name: "WONDER.", pos: [-138.5, 7.2, 103], crop: [0.3, 0.56, 0.95, 0.7],
     hint: "atop the diner sign, Bourbon & Dumaine — crates, balcony, jump" },
   { id: 5, name: "Crow & Hat Man", pos: [30, 5.4, -50.4], crop: [0.0, 0.33, 0.33, 0.78],
     hint: "the Pontalba gallery overlooking Jackson Square — climb the ironwork" },
   { id: 6, name: "Flowers & Songbird", pos: [-83, 4.9, -89], crop: [0.08, 0.5, 0.42, 0.85],
     hint: "a hanging basket over Royal Street — cross the balconies" },
-  { id: 7, name: "Pin-up Lady", pos: [-41, 0.8, -27], crop: [0.55, 0.28, 1.0, 0.62],
+  { id: 7, name: "Pin-up Lady", pos: [-38, 0.8, -24], crop: [0.55, 0.28, 1.0, 0.62],
     hint: "the Huntress keeps it — Pirate's Alley, beside the cathedral" },
   { id: 8, name: "Goldfish Bowl", pos: [-63, 1.2, -69], crop: [0.42, 0.6, 1.0, 0.95],
     hint: "inside the Royal St antiques shop — find a way through the roof" },
@@ -55,29 +55,36 @@ export interface EnemySpawn {
   group?: string;
 }
 
+// All street spawns sit ON the roadway (Bourbon centerline x≈-147,
+// half-width 3.5) — a spawn inside a building footprint is an invisible enemy.
 export const ENEMIES: EnemySpawn[] = [
-  // Bourbon Street frat packs (with intent: they guard the party blocks)
-  { kind: "frat", pos: [-143, 1, -48], group: "catsmeow" },
-  { kind: "frat", pos: [-140, 1, -55], group: "catsmeow" },
-  { kind: "frat", pos: [-146, 1, -57], group: "catsmeow" },
-  { kind: "frat", pos: [-150, 1, -12], group: "tropical" },
-  { kind: "frat", pos: [-145, 1, -6], group: "tropical" },
+  // spawn block: a gentle welcome pack two doors down from Lafitte's
+  { kind: "frat", pos: [-147, 1, 148], group: "lafittes" },
+  { kind: "frat", pos: [-145.5, 1, 143], group: "lafittes" },
+  // Bourbon Street pleat packs (pleats = the frat boys) (with intent: they guard the party blocks)
+  { kind: "frat", pos: [-146, 1, -48], group: "catsmeow" },
+  { kind: "frat", pos: [-148, 1, -55], group: "catsmeow" },
+  { kind: "frat", pos: [-145, 1, -58], group: "catsmeow" },
+  { kind: "frat", pos: [-148.5, 1, -12], group: "tropical" },
+  { kind: "frat", pos: [-145.5, 1, -6], group: "tropical" },
+  { kind: "frat", pos: [-148, 1, 28], group: "stann" },
+  { kind: "frat", pos: [-145.5, 1, 33], group: "stann" },
   { kind: "frat", pos: [-148, 1, -192], group: "stlouis" },
-  { kind: "frat", pos: [-144, 1, -198], group: "stlouis" },
-  { kind: "frat", pos: [-150, 1, -201], group: "stlouis" },
-  { kind: "frat", pos: [-150, 1, -320], group: "bienville" },
+  { kind: "frat", pos: [-145, 1, -198], group: "stlouis" },
+  { kind: "frat", pos: [-149, 1, -201], group: "stlouis" },
+  { kind: "frat", pos: [-149, 1, -320], group: "bienville" },
   { kind: "frat", pos: [-146, 1, -326], group: "bienville" },
-  { kind: "frat", pos: [-144, 1, 98], group: "dumaine" },
-  { kind: "frat", pos: [-149, 1, 104], group: "dumaine" },
+  { kind: "frat", pos: [-145.5, 1, 98], group: "dumaine" },
+  { kind: "frat", pos: [-148.5, 1, 104], group: "dumaine" },
   // Pirates work the riverfront and the market
-  { kind: "pirate", pos: [76, 1, 152], patrol: [[70, 1, 146], [82, 1, 162]] },
-  { kind: "pirate", pos: [88, 1, 52], patrol: [[92, 1, 58], [80, 1, 44]] },
-  { kind: "pirate", pos: [128, 1, -8], patrol: [[124, 1, -22], [134, 1, 8]] },
-  { kind: "pirate", pos: [92, 1, -222], patrol: [[96, 1, -214], [86, 1, -232]] },
-  { kind: "pirate", pos: [110, 1, 196], patrol: [[104, 1, 188], [118, 1, 206]] },
-  { kind: "pirate", pos: [4, 1, 262], patrol: [[0, 1, 254], [8, 1, 270]] },
-  // The Huntress lairs in Pirate's Alley
-  { kind: "huntress", pos: [-41, 1, -30] },
+  { kind: "pirate", pos: [76, 1, 152], patrol: [[72, 1, 146], [80, 1, 162]] },
+  { kind: "pirate", pos: [88, 1, 52], patrol: [[92, 1, 58], [82, 1, 44]] },
+  { kind: "pirate", pos: [128, 1, -8], patrol: [[124, 1, -22], [132, 1, 8]] },
+  { kind: "pirate", pos: [80, 1, -225], patrol: [[84, 1, -216], [76, 1, -234]] },
+  { kind: "pirate", pos: [110, 1, 196], patrol: [[106, 1, 188], [116, 1, 206]] },
+  { kind: "pirate", pos: [-4, 1, 262], patrol: [[-5, 1, 254], [-3, 1, 270]] },
+  // The Huntress lairs in Pirate's Alley (the alley runs along z≈-23.5)
+  { kind: "huntress", pos: [-41, 1, -24] },
 ];
 
 // Final wave at 8/8: between Joshua and Lipstixx on the 300 block
@@ -171,7 +178,7 @@ export const CLIMB_SPOTS: Array<{ pos: [number, number, number]; kind: "crates" 
 export const ZONES = {
   /** the gutter in front of Lafitte's Blacksmith Shop, Bourbon & St. Philip */
   spawn: [-150.5, 1.4, 160] as [number, number, number],
-  bossArena: { center: [-41, 0, -27] as [number, number, number], size: [16, 12] as [number, number] },
+  bossArena: { center: [-41, 0, -24] as [number, number, number], size: [16, 12] as [number, number] },
   lipstixxDoor: [-162, 1, -340] as [number, number, number],
   assemblySpot: [-157, 0.05, -335] as [number, number, number],
   jacksonStage: [14, 0, -9] as [number, number, number],
