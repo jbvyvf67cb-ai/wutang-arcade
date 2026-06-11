@@ -180,8 +180,8 @@ export class Combat {
       return;
     }
     this.state.fishbowls--;
+    this.state.damage(1); // it hits your health meter — before the glass goes up
     this.state.fishbowlTimer = 15;
-    this.state.damage(1); // it hits your health meter
     this.state.emit("fishbowl");
     this.state.emit("message", "🐠 FISHBOWL MODE — 15s of glassy invincibility");
     // helmet visual

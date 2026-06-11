@@ -18,6 +18,7 @@ import { AudioBus } from "./audio/audio";
 import { EnemyManager } from "./ai/enemies";
 import { ENEMIES, LAST_CALL, TICKET_PRICE } from "./level/layout";
 import { AssemblyMinigame, showEndCard } from "./ui/assembly";
+import { attachTouchControls } from "./ui/touch";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { attachDebug } from "./ui/debug";
@@ -297,12 +298,42 @@ async function boot() {
     input.consume();
   });
 
+  if (ctx.isTouch) attachTouchControls(input, state);
+
   attachDebug(engine, scene, () => {
     const p = player.position;
     return `pos ${p.x.toFixed(1)} ${p.y.toFixed(1)} ${p.z.toFixed(1)}  state ${player.state}`;
   });
 
-  engine.runRenderLoop(() => scene.render());
+  // ---- pause (Esc/P, or tap the badge on touch) ----
+  let paused = false;
+  const pauseEl = document.createElement("div");
+  pauseEl.style.cssText =
+    "position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;" +
+    "background:rgba(10,8,6,.7);color:#e8d5a3;font:italic 34px Georgia,serif;cursor:pointer";
+  pauseEl.textContent = "paused — the trombones wait";
+  document.body.appendChild(pauseEl);
+  const togglePause = () => {
+    paused = !paused;
+    pauseEl.style.display = paused ? "flex" : "none";
+  };
+  pauseEl.addEventListener("pointerdown", togglePause);
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Escape" || e.code === "KeyP") togglePause();
+  });
+  if (ctx.isTouch) {
+    const pbtn = document.createElement("div");
+    pbtn.textContent = "⏸";
+    pbtn.style.cssText =
+      "position:fixed;top:max(8px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);" +
+      "z-index:30;font-size:22px;color:#fff;opacity:.6;padding:6px 14px";
+    pbtn.addEventListener("pointerdown", togglePause);
+    document.body.appendChild(pbtn);
+  }
+
+  engine.runRenderLoop(() => {
+    if (!paused) scene.render();
+  });
 
   setLoading(100);
   document.getElementById("loading")?.classList.add("done");

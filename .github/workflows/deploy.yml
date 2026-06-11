@@ -25,8 +25,14 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - name: Report bundle size (budget 25MB initial)
-        run: du -sh dist && du -ah dist | sort -rh | head -20
+      - name: Bundle size gate (25MB budget)
+        run: |
+          du -sh dist
+          test "$(du -sm dist | cut -f1)" -le 25
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+      - name: Executable rubric (PLAN.md §9)
+        run: npx playwright test --config qa/playwright/playwright.config.ts
       - uses: actions/configure-pages@v5
         with:
           enablement: true

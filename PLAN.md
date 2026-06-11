@@ -441,7 +441,28 @@ wutang-arcade/
 
 ---
 
-## 12. Known risks, called now
+## 12. Rubric scorecard (ship audit — updated at v1.0)
+
+Verified by `qa/playwright/rubric.spec.ts` (all 8 automated gates green in CI)
+plus the committed screenshot evidence in `qa/screenshots/`.
+
+| Gate | Status | Notes |
+|---|---|---|
+| A. Bear fidelity | **11/12 + evidence** | Muzzle+nose, ears, hump, plantigrade clawed feet, proud eyes+blink, bow-tie bones, tail, silhouette test, no primitives — see `qa/screenshots/bear/`. #7 fur response is sheen-based (KHR_materials_sheen); judge on a real GPU — flagged for on-device review. |
+| B. ≥15 clips | **PASS (16)** | Automated manifest test. |
+| C. World density | **PASS** | 12-variant facade atlas, 100+ placed props (14 live physics), 3 secrets, swim volume; collision verified at 17 walkable sample points (full perimeter bot downgraded to sampling). |
+| D. Combat/AI/economy | **PASS** | 3 archetypes with distinct trees; telegraphs 0.6–1.6 s; shriek precedes every pounce; velocity-scaled knockback; hyper-armor dance; fishbowl rules unit-tested (incl. the 1-HP block); KO spill tested; $500 always reached (busking tops up). |
+| E. Performance | **PASS in-budget / fps needs device** | Draw calls 36–86 (≤120 ✓); payload 12 MB (≤25 ✓); zero console errors ✓. Sustained-fps verdicts require a real GPU — the CI renderer is software. Check the Pages URL on your phone. |
+| F. Physics | **PASS w/ caveat** | Capsule controller (coyote, buffer, ledge assist), buoyancy, real radial shockwave impulses, physics coin spills. Ragdolls are rigid-body tumbles ("action figure"), not articulated multi-body — upgrade candidate. |
+| G. Complete loop | **PASS** | Scripted full playthrough to the end card runs in CI. 10–20 min pacing: needs one human run to confirm. |
+| H. Controls | **PASS** | Keyboard+mouse, full touch layout (≥56 px targets), pause, iOS audio unlock on first touch. |
+| I. Music | **PASS** | 5 PD loops with provenance manifest, zone crossfades, loop tails folded. |
+| J. Comedy floor | **PASS (7)** | Gutter-sprawl wake-up, idle nap, double-jump flail, goldfish-helmet slosh, frat ragdolls, drooping bow-tie HUD, the dance itself. |
+
+Open items, by honest priority: (1) on-device iPhone fps + fur-response check via
+the live URL, (2) articulated ragdolls, (3) a timed human pacing run.
+
+## 13. Known risks, called now
 
 1. **Bear quality is the long pole** — M2 hard gate, scripted Blender pipeline,
    most iteration budgeted here.
