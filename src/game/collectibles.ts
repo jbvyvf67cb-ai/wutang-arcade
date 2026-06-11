@@ -32,6 +32,7 @@ export class Collectibles {
   constructor(
     private scene: Scene,
     private state: GameState,
+    extraCoins: Vector3[] = [],
   ) {
     // doubloon: short cylinder, gold PBR
     this.coinBase = MeshBuilder.CreateCylinder(
@@ -57,6 +58,7 @@ export class Collectibles {
         this.staticCoins.push({ pos: p, taken: false });
       }
     }
+    for (const p of extraCoins) this.staticCoins.push({ pos: p, taken: false });
     for (const [key, s] of Object.entries(SECRETS)) {
       const cluster: StaticCoin[] = [];
       const n = s.coins;

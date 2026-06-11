@@ -479,6 +479,35 @@ def main() -> None:
             "tri": tri,
         })
 
+    # --- land polygon: bounds rect on the city side, east edge = shoreline ---
+    shore_in = [p for p in shoreline if z0 <= p[1] <= z1]
+    land_pts = ([(x_land, z0), (shoreline[0][0], z0)]
+                + shore_in
+                + [(shoreline[-1][0], z1), (x_land, z1)])
+    if poly_area(land_pts) < 0:
+        land_pts.reverse()
+    land = {
+        "pts": [round(c, 1) for p in land_pts for c in p],
+        "tri": ear_clip(land_pts),
+    }
+
+    # --- Riverfront streetcar rails (railway=tram on the city side) ---
+    trams = []
+    for e in waterparks_raw:
+        if e.get("tags", {}).get("railway") != "tram" or not e.get("geometry"):
+            continue
+        pts = [G(g["lat"], g["lon"]) for g in e["geometry"]]
+        pts = [p for p in pts if in_quarter(p[0], p[1], margin=20)]
+        if len(pts) < 2:
+            continue
+        # riverfront line only: near the shoreline
+        mean_shore_d = sum(
+            abs(p[0] - min(shoreline, key=lambda s: abs(s[1] - p[1]))[0]) for p in pts
+        ) / len(pts)
+        if mean_shore_d > 60:
+            continue
+        trams.append([round(c, 1) for p in pts for c in p])
+
     # --- river polygon: shoreline + closure on the far side ---
     river_far = 160.0  # how far the water extends past the shore (scaled)
     far_sign = 1.0 if city_x < shoreline[0][0] else -1.0
@@ -575,6 +604,8 @@ def main() -> None:
         "pois": pois,
         "parks": parks,
         "river": river,
+        "land": land,
+        "trams": trams,
         "shoreline": [round(c, 1) for p in shoreline for c in p],
         "landmarks": landmarks,
     }

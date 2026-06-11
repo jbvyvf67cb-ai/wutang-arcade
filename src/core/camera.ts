@@ -43,12 +43,16 @@ export class ChaseCamera {
     this.shake = Math.min(1, this.shake + s);
   }
 
+  /** screenshot/debug: stop following and park the camera explicitly */
+  freeze = false;
+
   update(
     dt: number,
     input: InputState,
     playerMovingDir: { x: number; z: number } | null,
     orbitKeys = 0,
   ) {
+    if (this.freeze) return;
     // manual orbit (drag + Q/E)
     this.camera.alpha -= input.camDX + orbitKeys * 2.4 * dt;
     this.camera.beta = Math.min(MAX_BETA, Math.max(MIN_BETA, this.camera.beta + input.camDY));

@@ -10,7 +10,7 @@ import {
 import { PhysicsRaycastResult } from "@babylonjs/core/Physics/physicsRaycastResult";
 import { PhysicsEngine } from "@babylonjs/core/Physics/v2/physicsEngine";
 import { InputState } from "../core/input";
-import { ZONES } from "../level/layout";
+import { WATER } from "../level/layout";
 
 export type MoveState =
   | "ground"
@@ -119,11 +119,9 @@ export class PlayerController {
 
   private inWater(): boolean {
     const p = this.capsule.position;
-    const w = ZONES.water;
     return (
-      p.x > w.min[0] && p.x < w.max[0] &&
-      p.z > w.min[2] && p.z < w.max[2] &&
-      p.y - CAPSULE_HEIGHT * 0.25 < w.max[1]
+      p.y - CAPSULE_HEIGHT * 0.25 < WATER.surfaceY &&
+      WATER.isIn(p.x, p.z)
     );
   }
 
@@ -177,7 +175,7 @@ export class PlayerController {
 
     if (this.swimming) {
       // buoyancy: settle the chest at the waterline
-      const targetY = ZONES.water.max[1] - 0.45;
+      const targetY = WATER.surfaceY - 0.45;
       const depth = targetY - this.capsule.position.y;
       vy = vy * 0.8 + depth * 6 * dt * 60 * 0.05;
       if (input.jumpPressed) vy = 6.5; // hop out

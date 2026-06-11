@@ -6,30 +6,32 @@ import { ShadowGenerator } from "@babylonjs/core/Lights/Shadows/shadowGenerator"
 import "@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent";
 import { createGameContext } from "./core/setup";
 import { Input } from "./core/input";
-import { buildGraybox } from "./level/graybox";
+import { buildQuarter } from "./level/quarter";
 import { PlayerController } from "./player/controller";
 import { Bear } from "./player/bear";
 import { ChaseCamera } from "./core/camera";
 import { GameState } from "./game/state";
 import { Hud } from "./ui/hud";
+import { Minimap } from "./ui/minimap";
 import { Collectibles } from "./game/collectibles";
 import { Combat, GROOVE_RATE } from "./combat/combat";
 import { RUN_SPEED } from "./player/controller";
 import { AudioBus } from "./audio/audio";
 import { EnemyManager } from "./ai/enemies";
-import { ENEMIES, LAST_CALL, TICKET_PRICE } from "./level/layout";
+import { ENEMIES, LAST_CALL, TICKET_PRICE, ZONES, RESPAWNS, INTERIORS } from "./level/layout";
+import { TimeOfDay } from "./level/timeofday";
+import { Streetcar } from "./level/streetcar";
 import { AssemblyMinigame, showEndCard } from "./ui/assembly";
 import { attachTouchControls } from "./ui/touch";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { attachDebug } from "./ui/debug";
-import { ZONES } from "./level/layout";
 
 const TIPS = [
   "Waking the bear…",
-  "Sweeping last night off Bourbon Street…",
-  "Tightening the bow tie…",
-  "Chilling the daiquiris (it's 8am)…",
+  "Laying 78 squares of the Vieux Carré…",
+  "Hanging the ironwork galleries…",
+  "Frying beignets (it's 8am)…",
   "Tuning the trombones…",
 ];
 
@@ -40,6 +42,19 @@ function setLoading(pct: number, tipIndex?: number) {
     const tip = document.getElementById("loading-tip");
     if (tip) tip.textContent = TIPS[tipIndex % TIPS.length];
   }
+}
+
+function nearestRespawn(p: Vector3): Vector3 {
+  let best = RESPAWNS[0];
+  let bd = Infinity;
+  for (const r of RESPAWNS) {
+    const d = Math.hypot(r[0] - p.x, r[2] - p.z);
+    if (d < bd) {
+      bd = d;
+      best = r;
+    }
+  }
+  return new Vector3(...best);
 }
 
 async function boot() {
@@ -54,11 +69,11 @@ async function boot() {
 
   const ctx = await createGameContext(canvas);
   const { engine, scene, tier } = ctx;
-  setLoading(35, 1);
+  setLoading(30, 1);
 
-  // ---- 8am light rig: low warm sun + cool sky fill ----
+  // ---- light rig (time-of-day animates it from 8 AM onward) ----
   const sun = new DirectionalLight("sun", new Vector3(-0.45, -0.55, 0.55), scene);
-  sun.position = new Vector3(60, 60, -40);
+  sun.position = new Vector3(60, 80, -40);
   sun.intensity = 2.6;
   sun.diffuse = new Color3(1.0, 0.87, 0.68);
   const sky = new HemisphericLight("sky", new Vector3(0, 1, 0), scene);
@@ -70,26 +85,29 @@ async function boot() {
   shadows.usePercentageCloserFiltering = tier === "high";
   shadows.bias = 0.002;
 
-  // warm 8am haze down the street
   scene.fogMode = 2; // EXP2
-  scene.fogDensity = 0.0055;
+  scene.fogDensity = 0.0042;
   scene.fogColor = new Color3(0.82, 0.78, 0.72);
 
-  setLoading(55, 2);
-  const level = buildGraybox(scene);
+  setLoading(45, 2);
+  const level = await buildQuarter(scene);
   level.dynamicProps.forEach((p) => shadows.addShadowCaster(p));
+  setLoading(70, 3);
 
-  setLoading(75, 3);
   const input = new Input(canvas);
   const player = new PlayerController(scene, new Vector3(...ZONES.spawn));
   const camera = new ChaseCamera(scene, () => player.position);
+  camera.camera.maxZ = 700; // see across the river
   const state = new GameState();
   const hud = new Hud(state);
+  const minimap = new Minimap(level.data, state);
+  const time = new TimeOfDay(scene, sun, sky, state, level.setNight);
+  (window as unknown as { __hudMessage?: (m: string) => void }).__hudMessage = (m) =>
+    hud.message(m);
 
   const bear = await Bear.load(scene, player.visual);
   player.capsule.visibility = 0;
   bear.meshes.forEach((m) => shadows.addShadowCaster(m));
-  player.onJump = () => bear.oneShot("jump", 1.4);
   player.onDoubleJump = () => {
     bear.oneShot("doublejump", 1.2);
     state.addGroove(0.04); // style bonus
@@ -112,7 +130,7 @@ async function boot() {
     bear.oneShot("jump", 1.4);
     audio.jump();
   };
-  const collectibles = new Collectibles(scene, state);
+  const collectibles = new Collectibles(scene, state, level.streetCoins);
   const combat = new Combat(scene, state, player, bear);
 
   // ---- enemies ----
@@ -134,7 +152,6 @@ async function boot() {
   await enemyMgr.loadContainers();
   enemyMgr.spawnAll(ENEMIES);
   combat.hittables = enemyMgr.hittables;
-  combat.onShockwave = () => audio.shockwave();
   combat.onClawHit = (hit) => {
     if (!hit) audio.clink();
   };
@@ -158,16 +175,37 @@ async function boot() {
       lastCallSpawned = true;
       enemyMgr.spawnAll(LAST_CALL);
       combat.hittables = enemyMgr.hittables;
-      hud.message("8/8! Last call gauntlet — get to Lipstixx!", 5000);
+      level.interiors.find((i) => i.def.key === "lipstixx")?.open();
+      hud.message("8/8! Last call — Lipstixx is lit. Get to the 300 block of Bourbon!", 6000);
     }
   });
 
-  // antiques shop door unlocks once the goldfish bowl (piece 8) is lifted
+  // ---- interiors: doors open as the day rolls on ----
+  const msRau = level.interiors.find((i) => i.def.key === "ms_rau");
   collectibles.onPieceCollected = (def) => {
-    if (def.id === 8) {
-      level.lockedDoor.physicsBody?.dispose();
-      level.lockedDoor.dispose();
-      hud.message("The shop door clicks open behind you.");
+    if (def.id === 8 && msRau && !msRau.isOpen) {
+      msRau.open();
+      hud.message("The antiques shop door clicks open behind you.");
+    }
+  };
+  let doorHintCooldown = 0;
+
+  // ---- the Riverfront streetcar ----
+  const streetcar = level.tramLine.length >= 2 ? new Streetcar(scene, level.tramLine) : null;
+  if (streetcar) streetcar.onDing = () => audio.pickup();
+
+  // ---- busking on the Jackson Square stage: drop the Groove for tips ----
+  let lastBusk = -999;
+  combat.onShockwave = () => {
+    audio.shockwave();
+    const stage = new Vector3(...ZONES.jacksonStage);
+    const t = performance.now() / 1000;
+    if (Vector3.Distance(player.position, stage.add(new Vector3(0, 1, 0))) < 6 && t - lastBusk > 45) {
+      lastBusk = t;
+      const tips = 35 + Math.floor(Math.random() * 16);
+      collectibles.spawnBurst(player.position.add(new Vector3(0, 2, 0)), 18);
+      state.addCoins(tips - 18);
+      hud.message(`The square erupts! The crowd tips ${tips} doubloons 🎺`, 4500);
     }
   };
 
@@ -189,12 +227,12 @@ async function boot() {
     player.movementLocked = true;
     audio.playMusic("assembly_entertainer");
     const game = new AssemblyMinigame();
-    game.onSnap = (n) => audio.pickup();
+    game.onSnap = () => audio.pickup();
     game.onComplete = () => {
       // ---- busking finale: the crowd pays for the flight ----
       state.phase = "win";
       bear.oneShot("victory", 1.0);
-      hud.message("The morning crowd gathers…", 4000);
+      hud.message("The evening crowd gathers under the neon…", 4000);
       audio.playMusic("block3_saints");
       let shower = 0;
       const interval = setInterval(() => {
@@ -236,10 +274,7 @@ async function boot() {
     camera.addShake(0.6);
     hud.message("KO'd! Your doubloons!");
     setTimeout(() => {
-      const z = player.position.z;
-      const respawn =
-        z < 70 ? new Vector3(7.5, 1.2, 8) : z < 156 ? new Vector3(7.5, 1.2, 90) : new Vector3(7.5, 1.2, 176);
-      player.teleport(respawn);
+      player.teleport(nearestRespawn(player.position));
       state.health = state.maxHealth;
       state.emit("health");
       player.movementLocked = false;
@@ -247,7 +282,7 @@ async function boot() {
     }, 2400);
   });
 
-  // ---- opening: wake up in the gutter ----
+  // ---- opening: wake up in the gutter outside Lafitte's ----
   player.movementLocked = true;
   bear.oneShot("wake", 1.0);
   setTimeout(() => {
@@ -255,12 +290,12 @@ async function boot() {
     player.movementLocked = false;
     bear.interrupt();
     state.phase = "explore";
-    hud.message("Bourbon Street. 8:00 AM. Find the 8 collage pieces — and $500 for a flight home.", 6000);
+    hud.message("The French Quarter. 8:00 AM. 8 collage pieces, $500, one flight home.", 6000);
     setTimeout(() => {
       if (ctx.isTouch) {
-        hud.message("Left stick: move · drag right side: camera · moving fills your GROOVE", 6000);
+        hud.message("Left stick: move · drag right: camera · follow the orange compass chevron", 6000);
       } else {
-        hud.message("WASD move · drag or Q/E: camera · Space jump ×2 · J or click: claw · moving fills your GROOVE", 7000);
+        hud.message("WASD move · Space jump ×2 · J claw · K Groove · follow the orange compass chevron", 7000);
       }
     }, 6500);
   }, 4200);
@@ -270,18 +305,15 @@ async function boot() {
   state.on("groove", () => {
     if (state.grooveReady && !grooveTaught) {
       grooveTaught = true;
-      hud.message(ctx.isTouch ? "GROOVE FULL — hit DROP IT 💥" : "GROOVE FULL — press K to DROP IT LIKE IT'S HOT 💥", 6000);
+      hud.message(ctx.isTouch ? "GROOVE FULL — hit DROP IT 💥 (on the Jackson Sq stage: tips!)" : "GROOVE FULL — press K to DROP IT 💥 (on the Jackson Sq stage: tips!)", 6500);
     }
   });
 
-  // ---- kill plane: nothing falls forever on Bourbon Street ----
+  // ---- kill plane: the river is fine, the void is not ----
   scene.onBeforeRenderObservable.add(() => {
-    if (player.position.y < -8) {
-      const z = player.position.z;
-      const respawn =
-        z < 70 ? new Vector3(7.5, 1.4, 8) : z < 156 ? new Vector3(7.5, 1.4, 90) : new Vector3(7.5, 1.4, 176);
-      player.teleport(respawn);
-      hud.message("Whoa — that's not Bourbon Street anymore. Back you go.");
+    if (player.position.y < -12 && !player.swimming) {
+      player.teleport(nearestRespawn(player.position));
+      hud.message("Whoa — that's not the Quarter anymore. Back you go.");
     }
   });
 
@@ -289,10 +321,24 @@ async function boot() {
 
   let lastMoveDir: { x: number; z: number } | null = null;
   let wasSwimming = false;
+  let openIdx = 0;
   scene.onBeforeRenderObservable.add(() => {
     const dt = Math.min(engine.getDeltaTime() / 1000, 0.2);
     input.poll();
     player.update(dt, input.state, camera.yaw);
+
+    // streetcar carries the bear
+    if (streetcar) {
+      streetcar.update(dt);
+      const sp = streetcar.body.position;
+      const pp = player.position;
+      const local = pp.subtract(sp);
+      if (Math.abs(local.x) < 2.2 && Math.abs(local.z) < 5.2 && local.y > 0.5 && local.y < 4 && player.grounded) {
+        const v = player.aggregate.body.getLinearVelocity();
+        player.aggregate.body.setLinearVelocity(v.add(streetcar.velocity.scale(0.96)));
+      }
+    }
+
     const v = player.aggregate.body.getLinearVelocity();
     const horizSpeed = Math.hypot(v.x, v.z);
     lastMoveDir = horizSpeed > 0.8 ? { x: v.x, z: v.z } : null;
@@ -300,15 +346,53 @@ async function boot() {
     combat.update(dt, input.state);
     collectibles.update(dt, player.position);
     enemyMgr.update(dt);
+    time.update(dt);
+    level.updateCulling(player.position);
+    minimap.update(player.position, camera.yaw, time.clock);
 
-    // music zones
+    // open businesses on schedule
+    for (const itr of level.interiors) {
+      if (!itr.isOpen && itr.def.opens > 0 && itr.def.opens < 90 && time.hour >= itr.def.opens) {
+        itr.open();
+        hud.message(`${itr.def.label} is open.`, 3500);
+      }
+    }
+    // locked-door hint
+    doorHintCooldown = Math.max(0, doorHintCooldown - dt);
+    if (doorHintCooldown === 0) {
+      openIdx = (openIdx + 1) % level.interiors.length;
+      const itr = level.interiors[openIdx];
+      if (!itr.isOpen && Vector3.Distance(player.position, itr.doorPos.add(new Vector3(0, 1, 0))) < 3.4) {
+        doorHintCooldown = 6;
+        hud.message(
+          itr.def.opens >= 90
+            ? `${itr.def.label} — locked. There's a way over the roof…`
+            : `${itr.def.label} opens at ${itr.def.opens > 12 ? itr.def.opens - 12 : itr.def.opens} ${itr.def.opens >= 12 ? "PM" : "AM"}.`,
+          3000,
+        );
+      }
+    }
+
+    // walk-over interactables (interior gags)
+    const tNow = performance.now() / 1000;
+    for (const ia of level.interactables) {
+      if (tNow - ia.lastFired < ia.cooldown) continue;
+      if (Vector3.DistanceSquared(player.position, ia.pos) < ia.r * ia.r) {
+        ia.lastFired = tNow;
+        ia.fire();
+      }
+    }
+
+    // music regions: riverfront brass, Jackson Sq rag, Bourbon stomp, quiet lower Quarter
     if (state.phase !== "assembly" && state.phase !== "win") {
       const p = player.position;
+      const nearJackson = Math.hypot(p.x - 25, p.z + 10) < 75;
       const zone =
-        p.x < -12 ? "alley_st_james"
-        : p.z < 70 ? "block1_gutter_blues"
-        : p.z < 156 ? "block2_tiger_rag"
-        : "block3_saints";
+        Math.hypot(p.x + 41, p.z + 27) < 30 ? "alley_st_james" // the Huntress' alley
+        : nearJackson ? "assembly_entertainer"
+        : p.x > 95 ? "block3_saints" // the river
+        : p.x < -120 ? "block2_tiger_rag" // Bourbon
+        : "block1_gutter_blues"; // quiet Royal/Chartres
       audio.playMusic(zone);
     }
 
@@ -330,7 +414,7 @@ async function boot() {
 
   attachDebug(engine, scene, () => {
     const p = player.position;
-    return `pos ${p.x.toFixed(1)} ${p.y.toFixed(1)} ${p.z.toFixed(1)}  state ${player.state}`;
+    return `pos ${p.x.toFixed(1)} ${p.y.toFixed(1)} ${p.z.toFixed(1)}  ${time.clock}  state ${player.state}`;
   });
 
   // ---- pause (Esc/P, or tap the badge on touch) ----
@@ -373,9 +457,24 @@ async function boot() {
   w.__combat = combat;
   w.__camera = camera;
   w.__bear = bear;
-  w.__metrics = { grooveRate: GROOVE_RATE, runSpeed: RUN_SPEED };
+  w.__time = time;
+  w.__landmarks = level.landmarkMarkers;
+  w.__interiors = level.interiors.map((i) => ({
+    key: i.def.key, label: i.def.label, isOpen: () => i.isOpen,
+    inside: { x: i.insidePos.x, y: 1.2, z: i.insidePos.z },
+    open: i.open,
+  }));
+  w.__metrics = { grooveRate: GROOVE_RATE, runSpeed: RUN_SPEED, interiors: INTERIORS.length };
   w.__tp = (x: number, y: number, z: number) => {
     player.teleport(new Vector3(x, y, z));
+  };
+  w.__freecam = (px: number, py: number, pz: number, tx: number, ty: number, tz: number) => {
+    camera.freeze = true;
+    camera.camera.target.set(tx, ty, tz);
+    camera.camera.setPosition(new Vector3(px, py, pz));
+  };
+  w.__chasecam = () => {
+    camera.freeze = false;
   };
   w.__unlock = () => {
     player.movementLocked = false;

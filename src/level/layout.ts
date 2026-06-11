@@ -1,35 +1,23 @@
 /**
- * Bourbon Street build map — coordinates from PLAN.md §7.
- * Street runs along +Z. Roadway 12m wide (x in [-6,6]),
- * sidewalks 4m each side (x in [-10,-6] and [6,10]).
- * Building line beyond |x| = 10. Balcony level at y = 4.5.
+ * v2.0 gameplay layout — real French Quarter coordinates.
+ *
+ * The map is built from OSM data (assets/map/quarter.json, see tools/map/).
+ * Frame: +Z runs up-river→down-river along Bourbon (Canal at z≈-490,
+ * Esplanade at z≈+450); +X runs toward the Mississippi. Street centerlines:
+ * Bourbon x≈-147 · Royal x≈-76 · Chartres x≈-4 · Decatur x≈+76 · shore x≈+145.
+ * Ground is y=0; balcony decks at y=4.5; the river surface at y=-0.9.
  */
 
-export const STREET = {
-  length: 240,
-  roadHalfWidth: 6,
-  sidewalkWidth: 4,
-  balconyY: 4.5,
-  buildingDepth: 10,
-};
+export const TICKET_PRICE = 500;
 
-export interface BoxDef {
-  name: string;
-  pos: [number, number, number];
-  size: [number, number, number];
-  kind:
-    | "building"
-    | "balcony"
-    | "crate"
-    | "platform"
-    | "vehicle"
-    | "barrier"
-    | "sign"
-    | "prop";
-  /** rotation around Y in radians */
-  rotY?: number;
-  dynamic?: boolean;
-}
+export const BALCONY_Y = 4.5;
+
+/** River swim: surface height + region test (configured by quarter.ts). */
+export const WATER = {
+  surfaceY: -0.9,
+  /** true if (x,z) is over the Mississippi — set from shoreline data */
+  isIn: (_x: number, _z: number): boolean => false,
+};
 
 export interface PieceDef {
   id: number;
@@ -37,18 +25,27 @@ export interface PieceDef {
   pos: [number, number, number];
   /** crop rect of assets/collage/collage.png in UV space [u0,v0,u1,v1] */
   crop: [number, number, number, number];
+  /** navigation hint shown when the compass points here */
+  hint: string;
 }
 
-// Collage crops (collage.png is 1086x1448; UVs top-left origin)
 export const PIECES: PieceDef[] = [
-  { id: 1, name: "REALITY", pos: [7.5, 1.1, 30], crop: [0.05, 0.02, 0.97, 0.16] },
-  { id: 2, name: "IS MERELY", pos: [0, 4.0, 78], crop: [0.08, 0.17, 0.85, 0.28] },
-  { id: 3, name: "ANOTHER KIND OF", pos: [-7.5, 1.0, 110], crop: [0.05, 0.3, 0.72, 0.44] },
-  { id: 4, name: "WONDER.", pos: [8.5, 7.2, 164], crop: [0.3, 0.56, 0.95, 0.7] },
-  { id: 5, name: "Crow & Hat Man", pos: [8.0, 5.3, 55], crop: [0.0, 0.33, 0.33, 0.78] },
-  { id: 6, name: "Flowers & Songbird", pos: [-8.0, 4.9, 138], crop: [0.08, 0.5, 0.42, 0.85] },
-  { id: 7, name: "Pin-up Lady", pos: [-34, 0.8, 148], crop: [0.55, 0.28, 1.0, 0.62] },
-  { id: 8, name: "Goldfish Bowl", pos: [-8.5, 1.2, 218], crop: [0.42, 0.6, 1.0, 0.95] },
+  { id: 1, name: "REALITY", pos: [87, 1.0, 33], crop: [0.05, 0.02, 0.97, 0.16],
+    hint: "a café table under the green-striped awning — Café du Monde" },
+  { id: 2, name: "IS MERELY", pos: [14, 2.0, -9], crop: [0.08, 0.17, 0.85, 0.28],
+    hint: "the buskers' stage in front of the cathedral, Jackson Square" },
+  { id: 3, name: "ANOTHER KIND OF", pos: [-142, 1.0, -52], crop: [0.05, 0.3, 0.72, 0.44],
+    hint: "a stoop on Bourbon at St. Peter — watch for the frat pack" },
+  { id: 4, name: "WONDER.", pos: [-138.5, 7.2, 103], crop: [0.3, 0.56, 0.95, 0.7],
+    hint: "atop the diner sign, Bourbon & Dumaine — crates, balcony, jump" },
+  { id: 5, name: "Crow & Hat Man", pos: [30, 5.3, -64], crop: [0.0, 0.33, 0.33, 0.78],
+    hint: "the Pontalba gallery over St. Peter St — climb to the ironwork" },
+  { id: 6, name: "Flowers & Songbird", pos: [-86, 4.9, -88], crop: [0.08, 0.5, 0.42, 0.85],
+    hint: "a hanging basket over Royal Street — cross the balconies" },
+  { id: 7, name: "Pin-up Lady", pos: [-41, 0.8, -27], crop: [0.55, 0.28, 1.0, 0.62],
+    hint: "the Huntress keeps it — Pirate's Alley, beside the cathedral" },
+  { id: 8, name: "Goldfish Bowl", pos: [-66, 1.2, -64], crop: [0.42, 0.6, 1.0, 0.95],
+    hint: "inside the Royal St antiques shop — find a way through the roof" },
 ];
 
 export interface EnemySpawn {
@@ -59,69 +56,37 @@ export interface EnemySpawn {
 }
 
 export const ENEMIES: EnemySpawn[] = [
-  // Block 1 — gentle intro pack
-  { kind: "frat", pos: [3, 1, 40], group: "b1" },
-  { kind: "frat", pos: [-2, 1, 44], group: "b1" },
-  // Intersection A — pirate intro
-  {
-    kind: "pirate",
-    pos: [0, 1, 76],
-    patrol: [
-      [-8, 1, 76],
-      [8, 1, 80],
-    ],
-  },
-  // Block 2 — the gauntlet
-  { kind: "frat", pos: [-6, 1, 108], group: "daiquiri" },
-  { kind: "frat", pos: [-8, 1, 112], group: "daiquiri" },
-  { kind: "frat", pos: [-4, 1, 114], group: "daiquiri" },
-  { kind: "frat", pos: [5, 1, 126], group: "b2b" },
-  { kind: "frat", pos: [7, 1, 130], group: "b2b" },
-  {
-    kind: "pirate",
-    pos: [0, 1, 100],
-    patrol: [
-      [-6, 1, 96],
-      [6, 1, 104],
-    ],
-  },
-  {
-    kind: "pirate",
-    pos: [0, 1, 140],
-    patrol: [
-      [-7, 1, 136],
-      [5, 1, 148],
-    ],
-  },
-  // The Alley — boss
-  { kind: "huntress", pos: [-34, 1, 150] },
-  // Intersection B — mixed group
-  {
-    kind: "pirate",
-    pos: [2, 1, 164],
-    patrol: [
-      [-6, 1, 160],
-      [6, 1, 168],
-    ],
-  },
-  { kind: "frat", pos: [-3, 1, 162], group: "ib" },
-  { kind: "frat", pos: [4, 1, 166], group: "ib" },
+  // Bourbon Street frat packs (with intent: they guard the party blocks)
+  { kind: "frat", pos: [-143, 1, -48], group: "catsmeow" },
+  { kind: "frat", pos: [-140, 1, -55], group: "catsmeow" },
+  { kind: "frat", pos: [-146, 1, -57], group: "catsmeow" },
+  { kind: "frat", pos: [-150, 1, -12], group: "tropical" },
+  { kind: "frat", pos: [-145, 1, -6], group: "tropical" },
+  { kind: "frat", pos: [-148, 1, -192], group: "stlouis" },
+  { kind: "frat", pos: [-144, 1, -198], group: "stlouis" },
+  { kind: "frat", pos: [-150, 1, -201], group: "stlouis" },
+  { kind: "frat", pos: [-150, 1, -320], group: "bienville" },
+  { kind: "frat", pos: [-146, 1, -326], group: "bienville" },
+  { kind: "frat", pos: [-144, 1, 98], group: "dumaine" },
+  { kind: "frat", pos: [-149, 1, 104], group: "dumaine" },
+  // Pirates work the riverfront and the market
+  { kind: "pirate", pos: [76, 1, 152], patrol: [[70, 1, 146], [82, 1, 162]] },
+  { kind: "pirate", pos: [88, 1, 52], patrol: [[92, 1, 58], [80, 1, 44]] },
+  { kind: "pirate", pos: [128, 1, -8], patrol: [[124, 1, -22], [134, 1, 8]] },
+  { kind: "pirate", pos: [92, 1, -222], patrol: [[96, 1, -214], [86, 1, -232]] },
+  { kind: "pirate", pos: [110, 1, 196], patrol: [[104, 1, 188], [118, 1, 206]] },
+  { kind: "pirate", pos: [4, 1, 262], patrol: [[0, 1, 254], [8, 1, 270]] },
+  // The Huntress lairs in Pirate's Alley
+  { kind: "huntress", pos: [-41, 1, -30] },
 ];
 
-// Final wave spawned at 8/8 pieces (Block 3)
+// Final wave at 8/8: between Joshua and Lipstixx on the 300 block
 export const LAST_CALL: EnemySpawn[] = [
-  { kind: "frat", pos: [-4, 1, 200], group: "last" },
-  { kind: "frat", pos: [0, 1, 198], group: "last" },
-  { kind: "frat", pos: [4, 1, 200], group: "last" },
-  { kind: "frat", pos: [0, 1, 206], group: "last" },
-  {
-    kind: "pirate",
-    pos: [0, 1, 212],
-    patrol: [
-      [-5, 1, 210],
-      [5, 1, 214],
-    ],
-  },
+  { kind: "frat", pos: [-150, 1, -322], group: "last" },
+  { kind: "frat", pos: [-145, 1, -326], group: "last" },
+  { kind: "frat", pos: [-150, 1, -330], group: "last" },
+  { kind: "frat", pos: [-146, 1, -334], group: "last" },
+  { kind: "pirate", pos: [-148, 1, -338], patrol: [[-152, 1, -336], [-144, 1, -340]] },
 ];
 
 export interface ItemSpawn {
@@ -130,65 +95,97 @@ export interface ItemSpawn {
 }
 
 export const ITEMS: ItemSpawn[] = [
-  { kind: "beignet", pos: [7.5, 1.0, 26] }, // café counter
-  { kind: "fishbowl", pos: [-7.5, 1.0, 120] }, // daiquiri bar counter
-  { kind: "beignet", pos: [7, 5.3, 124] }, // secret 2 room
-  { kind: "fishbowl", pos: [7.5, 5.3, 126] }, // secret 2 room
-  { kind: "beignet", pos: [-30, 0.6, 142] }, // alley, pre-boss
-  { kind: "beignet", pos: [7.5, 1.0, 190] }, // block 3 pick-me-up
+  { kind: "beignet", pos: [84, 1.0, 38] },    // Café du Monde
+  { kind: "beignet", pos: [89, 1.0, 30] },    // Café du Monde
+  { kind: "beignet", pos: [-45, 1.0, 250] },  // Croissant d'Or
+  { kind: "beignet", pos: [-120, 1.0, -54] }, // outside Preservation Hall
+  { kind: "beignet", pos: [-80, 1.0, 318] },  // Verti Marte (24h, of course)
+  { kind: "beignet", pos: [-140, 1.0, 109] }, // Clover Grill
+  { kind: "fishbowl", pos: [-149, 1.0, -10] },  // Tropical Isle counter
+  { kind: "fishbowl", pos: [-117, 1.0, -72] },  // Pat O'Brien's courtyard
+  { kind: "fishbowl", pos: [-141, 1.0, -340] }, // Old Absinthe House, pre-finale
 ];
 
-/** Coin trail descriptors: line segments with count. */
 export interface CoinTrail {
   from: [number, number, number];
   to: [number, number, number];
   count: number;
 }
 
+/**
+ * Hand-placed trails for special routes. The long street trails are
+ * generated at runtime from the real street centerlines (quarter.ts).
+ */
 export const COIN_TRAILS: CoinTrail[] = [
-  // Block 1 (~60)
-  { from: [7.5, 0.6, 12], to: [7.5, 0.6, 50], count: 14 },
-  { from: [-7.5, 0.6, 16], to: [-7.5, 0.6, 56], count: 14 },
-  { from: [0, 0.6, 20], to: [0, 0.6, 60], count: 12 },
-  { from: [7.5, 5.0, 50], to: [7.5, 5.0, 60], count: 8 }, // balcony route to piece 5
-  { from: [3, 0.6, 62], to: [-3, 0.6, 68], count: 12 },
-  // Intersection A + truck
-  { from: [-4, 2.2, 78], to: [2, 3.6, 78], count: 6 },
-  // Block 2 (~90)
-  { from: [7.5, 0.6, 90], to: [7.5, 0.6, 150], count: 18 },
-  { from: [-7.5, 0.6, 90], to: [-7.5, 0.6, 150], count: 18 },
-  { from: [0, 0.6, 92], to: [0, 0.6, 152], count: 16 },
-  { from: [-8, 4.9, 128], to: [-8, 4.9, 146], count: 10 }, // balcony plank run
-  { from: [4, 0.6, 96], to: [-4, 0.6, 116], count: 14 },
-  { from: [-4, 0.6, 120], to: [4, 0.6, 148], count: 14 },
-  // Alley (~30, some floating in water)
-  { from: [-14, 0.6, 142], to: [-26, 0.6, 146], count: 10 },
-  { from: [-26, 0.45, 146], to: [-32, 0.45, 148], count: 10 }, // floating in flood
-  { from: [-34, 0.6, 152], to: [-38, 0.6, 154], count: 10 },
-  // Intersection B
-  { from: [-4, 0.6, 160], to: [4, 0.6, 170], count: 10 },
-  { from: [6, 3.2, 164], to: [8, 6.0, 164], count: 6 }, // pedicab->awning->sign
-  // Block 3 (~70)
-  { from: [7.5, 0.6, 176], to: [7.5, 0.6, 230], count: 18 },
-  { from: [-7.5, 0.6, 176], to: [-7.5, 0.6, 230], count: 18 },
-  { from: [0, 0.6, 180], to: [0, 0.6, 232], count: 16 },
-  { from: [-8.5, 0.6, 210], to: [-8.5, 0.6, 222], count: 8 },
+  // Pirate's Alley (toward the boss)
+  { from: [-8, 0.6, -23], to: [-38, 0.6, -24], count: 10 },
+  // Jackson Square plaza loop
+  { from: [12, 0.6, -40], to: [12, 0.6, 22], count: 10 },
+  // the Moonwalk
+  { from: [128, 0.6, -40], to: [130, 0.6, 40], count: 10 },
+  // floating in the Mississippi (swim reward)
+  { from: [152, -0.5, -20], to: [162, -0.5, 16], count: 12 },
+  // balcony runs
+  { from: [-88, 5.0, -110], to: [-88, 5.0, -70], count: 10 }, // Royal, piece 6 run
+  { from: [28, 5.0, -88], to: [28, 5.0, -58], count: 8 },     // Pontalba gallery
+  { from: [-141, 5.0, 84], to: [-141, 5.0, 102], count: 6 },  // Clover approach
+  // French Market arcade
+  { from: [80, 0.6, 180], to: [92, 0.6, 220], count: 10 },
 ];
 
 export const SECRETS = {
-  dumpsterAlcove: { pos: [9.5, 0.6, 36] as [number, number, number], coins: 25 },
-  shutterRoom: { pos: [8.5, 5.0, 125] as [number, number, number], coins: 40 },
-  rooftop: { pos: [-9, 9.5, 196] as [number, number, number], coins: 25 },
+  pereAntoine: { pos: [-40, 0.6, -4] as [number, number, number], coins: 25 },
+  pontalbaGallery: { pos: [28, 5.0, -96] as [number, number, number], coins: 30 },
+  riverSwim: { pos: [160, -0.5, -34] as [number, number, number], coins: 25 },
+  cabrini: { pos: [-250, 0.6, 362] as [number, number, number], coins: 30 },
 };
+
+/** Enterable interiors — geometry carved by quarter.ts from real footprints. */
+export interface InteriorDef {
+  key: string;          // landmark key in quarter.json
+  label: string;
+  opens: number;        // game hour the door unlocks (-1: always; 99: scripted)
+  theme: "cafe" | "bar" | "voodoo" | "jazz" | "antiques" | "club" | "cottage";
+}
+
+export const INTERIORS: InteriorDef[] = [
+  { key: "cafe_du_monde", label: "Café du Monde", opens: -1, theme: "cafe" },
+  { key: "lafittes_blacksmith", label: "Lafitte's Blacksmith Shop", opens: -1, theme: "cottage" },
+  { key: "voodoo_shop", label: "Marie Laveau's House of Voodoo", opens: 10, theme: "voodoo" },
+  { key: "old_absinthe_house", label: "Old Absinthe House", opens: 11, theme: "bar" },
+  { key: "preservation_hall", label: "Preservation Hall", opens: 17, theme: "jazz" },
+  { key: "ms_rau", label: "M.S. Rau Antiques", opens: 99, theme: "antiques" },
+  { key: "lipstixx", label: "Lipstixx", opens: 19, theme: "club" },
+];
+
+/** Crate stacks / props that open climbing routes to pieces & balconies. */
+export const CLIMB_SPOTS: Array<{ pos: [number, number, number]; kind: "crates" | "dumpster" | "van" }> = [
+  { pos: [-141, 0, 92], kind: "crates" },   // piece 4: Clover Grill balcony route
+  { pos: [24, 0, -52], kind: "van" },        // piece 5: Pontalba gallery route
+  { pos: [-86, 0, -110], kind: "crates" },   // piece 6: Royal balcony run start
+  { pos: [-64, 0, -72], kind: "dumpster" },  // piece 8: M.S. Rau roof route
+  { pos: [-150, 0, 154], kind: "crates" },   // spawn block: teach climbing
+  { pos: [-148, 0, -310], kind: "dumpster" },// Lipstixx block balconies
+];
 
 export const ZONES = {
-  spawn: [7.5, 1.2, 8] as [number, number, number],
-  water: { min: [-32, -1.2, 140] as [number, number, number], max: [-20, 0.55, 152] as [number, number, number] },
-  alleyEntrance: [-12, 1, 142] as [number, number, number],
-  bossArena: { center: [-34, 0, 150] as [number, number, number], size: [14, 10] as [number, number] },
-  lipstixx: [9, 1, 225] as [number, number, number],
-  assemblySpot: [6.5, 0.05, 222] as [number, number, number],
-  travelAgency: [9, 1, 234] as [number, number, number],
+  /** the gutter in front of Lafitte's Blacksmith Shop, Bourbon & St. Philip */
+  spawn: [-150.5, 1.4, 160] as [number, number, number],
+  bossArena: { center: [-41, 0, -27] as [number, number, number], size: [16, 12] as [number, number] },
+  lipstixxDoor: [-162, 1, -340] as [number, number, number],
+  assemblySpot: [-157, 0.05, -335] as [number, number, number],
+  jacksonStage: [14, 0, -9] as [number, number, number],
+  cafeDuMonde: [86, 0, 36] as [number, number, number],
 };
 
-export const TICKET_PRICE = 500;
+/** KO / kill-plane respawn anchors (nearest is used). */
+export const RESPAWNS: [number, number, number][] = [
+  [-150.5, 1.4, 160],   // Lafitte's (spawn)
+  [-147, 1.4, 28],      // Bourbon & St. Ann
+  [-147, 1.4, -123],    // Bourbon & Toulouse
+  [-147, 1.4, -265],    // Bourbon & Conti
+  [-147, 1.4, -336],    // Lipstixx block
+  [14, 1.4, -9],        // Jackson Square
+  [76, 1.4, 150],       // French Market
+  [120, 1.4, 0],        // the Moonwalk
+];
