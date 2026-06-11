@@ -57,18 +57,22 @@ story = [
     P("JOSHUA: A French Quarter Bear Tale · one-time setup, about 10 minutes", "sub"),
     HRFlowable(width="100%", color=GOLD, thickness=2),
 
-    P("1. Add the Anthropic API key (required)", "h"),
+    P("1. Connect your Claude subscription (required)", "h"),
     check_row([
-        ("Create the key", "console.anthropic.com → API Keys → Create key. "
-         "Set a monthly spend limit there too — each non-empty update round costs roughly "
-         "one normal Claude Code session."),
+        ("Generate a token", "On a computer with Claude Code installed, run "
+         "<font face='Courier-Bold'>claude setup-token</font> in a terminal and sign in "
+         "with your Claude account (needs a Pro or Max plan). Copy the long token it "
+         "prints (starts with sk-ant-oat01-…)."),
         ("Add it to GitHub", f"{REPO} → Settings → Secrets and variables → Actions → "
          "New repository secret. Name it exactly:"),
     ]),
     Spacer(1, 2),
-    P("&nbsp;&nbsp;&nbsp;&nbsp;ANTHROPIC_API_KEY", "mono"),
-    P("Until this secret exists, rounds with requests in the queue will fail "
-      "(empty-queue rounds are free and fine).", "b"),
+    P("&nbsp;&nbsp;&nbsp;&nbsp;CLAUDE_CODE_OAUTH_TOKEN", "mono"),
+    P("Update rounds bill your subscription's usage allowance (the same pool as your "
+      "own Claude Code sessions) — no API charges. Until this secret exists, rounds with "
+      "requests in the queue will fail; empty-queue rounds are free and fine. If rounds "
+      "ever start failing with an authentication error, re-run "
+      "<font face='Courier-Bold'>claude setup-token</font> and replace the secret.", "b"),
 
     P("2. Invite your group (required — the repo is private)", "h"),
     check_row([
@@ -98,8 +102,12 @@ story = [
     P("5. Ongoing (light touch)", "h"),
     check_row([
         ("Watch the Actions tab", "A red ✗ on “Group updates” means a round failed "
-         "(usual cause: API key out of credit). Failed rounds leave the queue intact — "
-         "requests are picked up next round once fixed."),
+         "(usual causes: expired token — regenerate it — or your plan's usage window "
+         "was exhausted). Failed rounds leave the queue intact — requests are picked "
+         "up next round."),
+        ("Mind your usage", "Each non-empty round draws from your plan's Claude Code "
+         "allowance, like a session you ran yourself. Four rounds/day only spend "
+         "anything when the queue has requests."),
         ("Audit trail", "Every round writes updates/processed/&lt;timestamp&gt;/SUMMARY.md "
          "explaining what changed and why."),
         ("Run on demand", "Actions → Group updates → Run workflow, any time."),

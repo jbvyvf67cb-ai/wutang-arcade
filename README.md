@@ -62,7 +62,8 @@ requests, verifies the build, publishes to the live URL, and archives each
 request with a summary in `updates/processed/`. See
 [`updates/README.md`](updates/README.md) for the format and
 `.github/workflows/group-updates.yml` for the schedule. (Requires the
-`ANTHROPIC_API_KEY` repository secret.)
+`CLAUDE_CODE_OAUTH_TOKEN` repository secret — a Claude Pro/Max subscription
+token from `claude setup-token`.)
 
 ## Tech
 

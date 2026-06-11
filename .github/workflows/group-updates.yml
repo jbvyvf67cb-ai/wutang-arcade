@@ -51,9 +51,12 @@ jobs:
         if: steps.queue.outputs.count != '0'
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Subscription auth: long-lived OAuth token from `claude setup-token`
+          # (bills the owner's Claude Pro/Max plan, not API pay-per-token).
+          # No --model pin: uses the plan's default so it works on any tier.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_args: '--model claude-opus-4-8 --max-turns 250 --allowedTools "Bash,Read,Edit,Write,Glob,Grep,WebFetch,WebSearch,NotebookEdit"'
+          claude_args: '--max-turns 250 --allowedTools "Bash,Read,Edit,Write,Glob,Grep,WebFetch,WebSearch,NotebookEdit"'
           prompt: |
             You are the group-updates routine for JOSHUA — A French Quarter
             Bear Tale, a 3D Babylon.js platformer in this repo. Players have
