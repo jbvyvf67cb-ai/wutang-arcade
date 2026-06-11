@@ -106,7 +106,8 @@ export class PlayerController {
     const engine = this.scene.getPhysicsEngine() as PhysicsEngine | null;
     if (!engine) return false;
     const from = this.capsule.position.clone();
-    const to = from.add(new Vector3(0, -(CAPSULE_HEIGHT / 2 + 0.25), 0));
+    // 0.32 reach: keeps `grounded` steady at jog speed over mesh seams
+    const to = from.add(new Vector3(0, -(CAPSULE_HEIGHT / 2 + 0.32), 0));
     engine.raycastToRef(from, to, this.rayResult, {
       shouldHitTriggers: false,
     });
