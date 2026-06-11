@@ -57,13 +57,14 @@ chevron points at the nearest missing collage piece, with a hint underneath.
 
 Anyone can change the game: drop a plain-text request into
 **`updates/queue/`** and push. Four times a day (8 AM / 2 PM / 8 PM /
-midnight US Central) a scheduled Claude routine implements the queued
-requests, verifies the build, publishes to the live URL, and archives each
-request with a summary in `updates/processed/`. See
-[`updates/README.md`](updates/README.md) for the format and
-`.github/workflows/group-updates.yml` for the schedule. (Requires the
-`CLAUDE_CODE_OAUTH_TOKEN` repository secret — a Claude Pro/Max subscription
-token from `claude setup-token`.)
+midnight) **Claude Code Routines** — scheduled cloud sessions on the
+owner's Claude subscription, managed at
+[claude.ai/code/routines](https://claude.ai/code/routines) — implement the
+queued requests, verify the build, push to the default branch (which
+auto-deploys), and archive each request with a summary in
+`updates/processed/`. See [`updates/README.md`](updates/README.md) for the
+request format and [`updates/ROUTINE-PROMPT.md`](updates/ROUTINE-PROMPT.md)
+for the routine's instructions.
 
 ## Tech
 

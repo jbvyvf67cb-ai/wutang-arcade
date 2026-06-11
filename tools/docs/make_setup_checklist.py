@@ -57,22 +57,29 @@ story = [
     P("JOSHUA: A French Quarter Bear Tale · one-time setup, about 10 minutes", "sub"),
     HRFlowable(width="100%", color=GOLD, thickness=2),
 
-    P("1. Connect your Claude subscription (required)", "h"),
+    P("1. Create the routines on claude.ai (required — no coding, no terminal)", "h"),
+    P("The update rounds are <b>Claude Code Routines</b>: scheduled cloud sessions that "
+      "run on your Claude Pro/Max subscription. You create them in your browser at "
+      "<b>claude.ai/code/routines</b> (or in the Claude desktop app: Routines → "
+      "New routine → Remote). No API key, no command line.", "b"),
     check_row([
-        ("Generate a token", "On a computer with Claude Code installed, run "
-         "<font face='Courier-Bold'>claude setup-token</font> in a terminal and sign in "
-         "with your Claude account (needs a Pro or Max plan). Copy the long token it "
-         "prints (starts with sk-ant-oat01-…)."),
-        ("Add it to GitHub", f"{REPO} → Settings → Secrets and variables → Actions → "
-         "New repository secret. Name it exactly:"),
+        ("Open the form", "Go to claude.ai/code/routines → <b>New routine</b>. If asked, "
+         "connect your GitHub account so Claude can access the repo."),
+        ("Name + instructions", "Name it “Group updates — 8 AM”. Into the Instructions "
+         "box, paste the prompt from the repo file <b>updates/ROUTINE-PROMPT.md</b> "
+         "(open it on GitHub and copy everything below the line). Pick your preferred "
+         "model in the prompt box."),
+        ("Repository", f"Add <b>{REPO.split('/')[-2]}/{REPO.split('/')[-1]}</b>."),
+        ("Permissions tab", "Enable <b>Allow unrestricted branch pushes</b> for the repo "
+         "— the routine must push to the default branch so the game deploys."),
+        ("Trigger", "Schedule → Daily → 8:00 AM (times are in your local timezone)."),
+        ("Repeat ×3", "Create three more routines with the same prompt and repo, "
+         "scheduled daily at 2:00 PM, 8:00 PM, and 12:00 AM."),
     ]),
-    Spacer(1, 2),
-    P("&nbsp;&nbsp;&nbsp;&nbsp;CLAUDE_CODE_OAUTH_TOKEN", "mono"),
-    P("Update rounds bill your subscription's usage allowance (the same pool as your "
-      "own Claude Code sessions) — no API charges. Until this secret exists, rounds with "
-      "requests in the queue will fail; empty-queue rounds are free and fine. If rounds "
-      "ever start failing with an authentication error, re-run "
-      "<font face='Courier-Bold'>claude setup-token</font> and replace the secret.", "b"),
+    P("Runs bill your subscription's usage allowance (same pool as your own Claude Code "
+      "sessions) and count against a daily routine-run cap — empty-queue rounds exit in "
+      "seconds and cost almost nothing. Commits and pushes appear as <i>your</i> GitHub "
+      "account.", "b"),
 
     P("2. Invite your group (required — the repo is private)", "h"),
     check_row([
@@ -86,8 +93,8 @@ story = [
         ("Queue a small request", "Repo → updates/queue → Add file → Create new file → "
          "name it test.txt, write something small (“add one extra coin trail on Royal "
          "Street”), commit."),
-        ("Trigger a round now", "Repo → Actions → “Group updates” → Run workflow "
-         "(no need to wait for the schedule)."),
+        ("Trigger a round now", "claude.ai/code/routines → open the 8 AM routine → "
+         "<b>Run now</b>. Click the run to watch the session live."),
         ("Verify (10–30 min later)", "The live game updated; your file moved to "
          "updates/processed/&lt;timestamp&gt;/ next to a SUMMARY.md; the queue is empty again."),
     ]),
@@ -101,25 +108,25 @@ story = [
 
     P("5. Ongoing (light touch)", "h"),
     check_row([
-        ("Watch the Actions tab", "A red ✗ on “Group updates” means a round failed "
-         "(usual causes: expired token — regenerate it — or your plan's usage window "
-         "was exhausted). Failed rounds leave the queue intact — requests are picked "
-         "up next round."),
-        ("Mind your usage", "Each non-empty round draws from your plan's Claude Code "
-         "allowance, like a session you ran yourself. Four rounds/day only spend "
-         "anything when the queue has requests."),
+        ("Check the runs list", "claude.ai/code/routines shows every run. Green only "
+         "means the session finished — open a run's transcript to see what was actually "
+         "done. Failed or skipped rounds leave the queue intact; requests are picked up "
+         "next round."),
+        ("Mind your usage", "Track consumption at claude.ai/settings/usage. Each "
+         "non-empty round draws from your plan like a session you ran yourself; rounds "
+         "also count against a daily routine-run cap."),
         ("Audit trail", "Every round writes updates/processed/&lt;timestamp&gt;/SUMMARY.md "
          "explaining what changed and why."),
-        ("Run on demand", "Actions → Group updates → Run workflow, any time."),
+        ("Pause / run on demand", "Each routine's page has a pause toggle and a "
+         "Run now button."),
     ]),
 
     Spacer(1, 10),
     HRFlowable(width="100%", color=GOLD, thickness=2),
-    P("<b>Schedule:</b> 8 AM, 2 PM, 8 PM, midnight — US Central <i>daylight</i> time. "
-      "GitHub cron ignores DST, so in winter the rounds land an hour later unless you edit "
-      "the four cron lines in .github/workflows/group-updates.yml.", "b"),
-    P("<b>Branch note:</b> the routine runs from (and deploys from) the default branch — "
-      "leave the default branch as-is and everything stays lined up.", "b"),
+    P("<b>Schedule:</b> 8 AM, 2 PM, 8 PM, midnight — entered in your local timezone in "
+      "the routine form. Runs may start a few minutes late (scheduling stagger is normal).", "b"),
+    P("<b>Branch note:</b> the routines push to (and the game deploys from) the default "
+      "branch — leave the default branch as-is and everything stays lined up.", "b"),
 ]
 
 doc = SimpleDocTemplate(OUT, pagesize=letter, topMargin=0.6 * inch, bottomMargin=0.6 * inch,

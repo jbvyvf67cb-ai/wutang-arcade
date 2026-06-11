@@ -48,9 +48,7 @@ costs nothing.
   the summary explains the call that was made.
 - Requests that would break the game (or the rubric in `PLAN.md` §9) get
   scaled back or declined — with an explanation in the summary.
-- Schedule: the workflow lives in `.github/workflows/group-updates.yml`.
-  GitHub cron is UTC, so the times are pinned to US Central **daylight**
-  time (CDT). When DST ends, runs shift one hour later in local time —
-  edit the cron lines if that matters to you.
-- You can also trigger a run on demand: Actions → "Group updates" →
-  Run workflow.
+- Schedule: the rounds are Claude Code **Routines** on the owner's Claude
+  subscription, managed at claude.ai/code/routines (one routine per time
+  slot, instructions in `ROUTINE-PROMPT.md`). The owner can pause them,
+  edit the times, or hit **Run now** for an immediate round.
