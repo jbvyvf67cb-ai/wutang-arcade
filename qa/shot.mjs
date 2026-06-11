@@ -35,7 +35,8 @@ for (const a of actions) {
     }, a).catch(() => {});
     await page.waitForTimeout(400);
   } else if (a.type === "eval") {
-    await page.evaluate(a.code);
+    const result = await page.evaluate(a.code);
+    if (result !== undefined) console.log("eval:", JSON.stringify(result));
     await page.waitForTimeout(a.ms ?? 300);
   }
 }
