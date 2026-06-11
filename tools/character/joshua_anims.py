@@ -86,6 +86,10 @@ def build_all_clips(arm_obj):
         A.key("head", f, rot=(0.02, yaw, 0))
     for f, wag in [(1, 0.1), (36, -0.1), (72, 0.1)]:
         A.key("tail", f, rot=(0, 0, wag))
+    for f in (1, 36, 72):
+        A.key("forearm.L", f, rot=(0.3, 0, 0))
+    A.key("forearm.R", 1, rot=(0.3, 0, 0))
+    A.key("forearm.R", 72, rot=(0.3, 0, 0))
     # idle scratch beat: right paw to belly around f40
     A.key("upper_arm.R", 30, rot=(0, 0, 0))
     A.key("upper_arm.R", 40, rot=(0.55, 0, -0.25))
@@ -223,14 +227,16 @@ def build_all_clips(arm_obj):
     a = A.begin("attack")
     # windup: arm cocked high behind, torso coiled
     A.key("upper_arm.R", 2, rot=(-1.4, 0, 1.0))
-    A.key("forearm.R", 2, rot=(1.0, 0, 0))
+    A.key("forearm.R", 2, rot=(1.9, 0, 0))
+    A.key("hand.R", 2, rot=(0.5, 0, 0))
     A.key("spine", 2, rot=(0.05, -0.6, 0))
     A.key("hips", 2, rot=(0, -0.25, 0))
     A.key("head", 2, rot=(0, -0.3, 0))
     A.key("upper_arm.L", 2, rot=(0.3, 0, -0.3))
     # STRIKE: huge cross-body arc, claws leading, lunge into it
     A.key("upper_arm.R", 5, rot=(2.0, 0, -1.0))
-    A.key("forearm.R", 5, rot=(0.1, 0, 0))
+    A.key("forearm.R", 5, rot=(0.15, 0, 0))
+    A.key("hand.R", 5, rot=(-0.5, 0, 0))
     A.key("spine", 5, rot=(-0.2, 0.7, 0))
     A.key("hips", 5, rot=(0, 0.3, 0))
     A.key("head", 5, rot=(0.1, 0.35, 0))
@@ -238,10 +244,11 @@ def build_all_clips(arm_obj):
     A.key("bowtie", 5, rot=(0, 0, 0.5))
     # follow-through hold
     A.key("upper_arm.R", 8, rot=(1.7, 0, -1.15))
+    A.key("forearm.R", 8, rot=(0.8, 0, 0))
     A.key("spine", 8, rot=(-0.15, 0.55, 0))
     A.key("bowtie", 8, rot=(0, 0, -0.3))
     # recover
-    for b in ("upper_arm.R", "forearm.R", "spine", "hips", "head", "upper_arm.L", "bowtie"):
+    for b in ("upper_arm.R", "forearm.R", "hand.R", "spine", "hips", "head", "upper_arm.L", "bowtie"):
         A.key(b, 14, rot=(0, 0, 0))
     A.finish(a, 14)
 
