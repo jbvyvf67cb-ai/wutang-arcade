@@ -2,7 +2,7 @@ name: Build and deploy to GitHub Pages
 
 on:
   push:
-    branches: [main, "claude/plan-md-review-idbzyq"]
+    branches: [main, "claude/joshua-bear-platformer-7jr08s", "claude/plan-md-review-idbzyq"]
   workflow_dispatch:
 
 permissions:
