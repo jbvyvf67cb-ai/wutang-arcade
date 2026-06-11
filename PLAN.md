@@ -1,5 +1,133 @@
 # JOSHUA — A Bourbon Street Bear Tale
 
+---
+
+## ⚡ HANDOFF — NEW SESSION: READ THIS FIRST (v2.0 mission)
+
+You are continuing a live project. The game is built, deployed, and playable:
+**https://jbvyvf67cb-ai.github.io/wutang-arcade/** (auto-deploys on every push
+to this branch via `.github/workflows/deploy.yml`). Read the git log for the
+full build history. Versions v1.0–v1.3 shipped the complete game loop on a
+3-block placeholder map. Your job is **v2.0: replace the placeholder with the
+real French Quarter and make the game genuinely immersive and fun.**
+
+This is a capability test. The bar is: a NOLA expert plays it and grins at how
+much is *right*. Work autonomously — make decisions, iterate against the gates
+below, commit and push at every milestone, judge your own screenshots, and do
+not stop to ask questions unless truly blocked. Do not wait for prompts.
+
+### Mission requirements (in priority order)
+
+1. **Verify network access first**: `curl -s https://overpass-api.de/api/status`
+   must return 200 (the environment now has Full network access). If blocked,
+   tell the user immediately — everything below depends on it.
+
+2. **Fetch the real Quarter from OpenStreetMap** (Overpass API):
+   - bbox (south, west, north, east): `(29.949, -90.0745, 29.9665, -90.055)` —
+     Rampart to the Mississippi, Canal to Esplanade, with margin.
+   - Pull: `building` ways/relations (footprints + `height`/`building:levels`
+     tags), `highway` ways (street centerlines + names), named POIs
+     (`amenity`, `shop`, `tourism`, `leisure`, `historic`), parks, the
+     riverbank (`natural=water` / `waterway=riverbank`).
+   - Example query shape:
+     `[out:json][timeout:90]; (way["building"](bbox); rel["building"](bbox);
+     way["highway"](bbox); node["amenity"](bbox); ... ); out body geom;`
+   - **Commit the raw responses** to `assets/map/osm_raw/*.json` so the build
+     is reproducible offline. Write the fetch script in `tools/map/`.
+
+3. **Research the real places** (you have full web access — use WebSearch/
+   WebFetch): confirm landmark locations, what the buildings look like
+   (colors, stories, balconies, awnings), and which businesses a local would
+   expect: St. Louis Cathedral + Cabildo + Presbytère, Jackson Square +
+   Pontalba buildings, Café du Monde, French Market, Jax Brewery, Preservation
+   Hall, Pat O'Brien's, Lafitte's Blacksmith Shop, Old Absinthe House, Hotel
+   Monteleone, Antoine's, Galatoire's, Napoleon House, Court of Two Sisters,
+   M.S. Rau, Marie Laveau's House of Voodoo, Cornstalk Hotel, LaLaurie
+   Mansion, Old Ursuline Convent, Beauregard-Keyes House, Madame John's
+   Legacy, Old U.S. Mint, Central Grocery, Tujague's, Coop's Place, Molly's at
+   the Market, Clover Grill, Café Lafitte in Exile, Cat's Meow, Tropical Isle,
+   Musical Legends Park, Pirate's Alley + Faulkner House, Père Antoine Alley,
+   Washington Artillery Park, the Moonwalk… and the lesser-known spots that
+   make experts smile (Verti Marte, Croissant d'Or, Erin Rose, Checkpoint
+   Charlie's, Cabrini Playground, Exchange Place). **Lipstixx** (fictional,
+   ours) replaces one of the real strip-club lots on Bourbon's 300–400 block.
+
+4. **Build the map from real footprints, cartoonified**: project lon/lat to
+   local meters, scale ~0.65 for gameplay, triangulate footprints in Python
+   (committed precomputed geometry — don't ship a triangulator), extrude with
+   stylized heights (use OSM `building:levels` where present), apply the
+   existing facade-atlas style + per-landmark colors/signage (Babylon
+   `DynamicTexture` renders real names; PIL for hero signs). Real street names
+   on blades at every intersection. Galleries/balconies on Royal & Bourbon
+   where they belong. The Mississippi is real water past the Moonwalk — and
+   **swimmable** (the swim system already works; point `ZONES.water` at the
+   river and let the kill plane spare it).
+
+5. **Time of day + interiors — the immersion centerpiece**: the day advances
+   as you play (e.g., 8 AM at wake-up → golden evening by the finale; tie
+   progression to pieces collected and/or elapsed time, sun + light rig
+   animate). As hours pass, **businesses open**: doors unlock and you can walk
+   inside. Minimum 6 enterable interiors, each themed (Café du Monde tables +
+   powdered sugar, a Bourbon bar with counter and stools, the voodoo shop,
+   Preservation Hall's band room, M.S. Rau's antiques (the piece-8 heist),
+   Lipstixx for the finale). Interiors can be simple rooms — but *themed*,
+   lit, with at least one interactable or gag each.
+
+6. **Make it FUN — gameplay, not just geography**: keep every existing
+   mechanic green (the FEEL gates below are non-negotiable), then use the real
+   map: balcony-to-balcony traversal runs, rooftop routes, a Jackson Square
+   buskers' stage, collectibles rebalanced across the whole Quarter with a
+   piece-direction compass or minimap (navigation aid is REQUIRED at this map
+   size — getting lost isn't fun), enemies re-placed with intent (frat packs
+   on Bourbon, pirates near the river, the Huntress lairs in Pirate's Alley),
+   density tuned so something interesting happens every ~20 seconds of travel.
+   Add at least two new mechanics or side-activities that exploit the real
+   place. Re-time the loop: full quest 15–25 min at the new scale.
+
+7. **Hold the budgets on the big map**: merge geometry per block, cull or LOD
+   distant chunks, keep ≤120 draw calls in view, ≤25 MB payload, zero console
+   errors. The existing rubric (`qa/playwright/rubric.spec.ts`) must pass —
+   **update its coordinates** to the new map, and add gates: ≥30 named
+   landmarks placed within ~25 m (scaled) of their OSM position (verify
+   programmatically against the committed OSM data), ≥6 enterable interiors,
+   time-of-day advances, river swim works.
+
+8. **Credits**: OSM data is ODbL — add "Map data © OpenStreetMap contributors"
+   to the README and the end card.
+
+### Technical landmines already solved — do not re-trip them
+
+- **Safari/iOS**: never enable Babylon animation blending (stuck poses); the
+  bear driver (`src/player/bear.ts`) uses instant switches + a watchdog. Touch
+  input must never trust pointer capture — track via window events (see
+  `src/ui/touch.ts`).
+- **Characters are scripted Blender** (`tools/character/`, `pip install bpy`):
+  parametric tubes with **parallel-transport frames** (`bearlib.py` — naive
+  frames twist and pinch). Anim sign conventions are documented at the top of
+  `joshua_anims.py`. Rebuild: `python3 tools/character/build_joshua.py`.
+- **QA**: Playwright is pinned to 1.56.0 (matches preinstalled Chromium 1194
+  in `/opt/pw-browsers`; downloads may be slow/blocked — test before relying
+  on a newer browser). Software GL ≈ 4 fps — use generous waits; absolute fps
+  in CI is meaningless. `qa/shot.mjs` is the quick screenshot harness; the
+  game exposes `__tp/__state/__combat/__enemies/__unlock/__metrics` for tests.
+- **CI**: the `rubric` job is informational (runners have no WebGL); deploy
+  gates on build + bundle size only. The authoritative rubric run is local.
+- **Vite**: `publicDir: "assets"` — asset URLs are `./models/...`,
+  `./textures/...`, `./audio/...`, `./collage/...`.
+- **Music** is fluidsynth-rendered PD jazz (`tools/audio/make_music.py`,
+  needs `apt-get install fluidsynth fluid-soundfont-gm` after `apt-get update`).
+  espeak-ng for the Huntress. Keep zone-based crossfades; add zones for the
+  new districts (riverfront = Saints, Jackson Sq = Entertainer, etc.).
+- The collage quest, Groove/Drop special, fishbowl, KO coin spill, assembly
+  minigame, and busking finale all work — relocate them; don't rebuild them.
+
+### Definition of done for v2.0
+All rubric gates green locally · live URL updated · a screenshot tour
+committed to `qa/screenshots/quarter/` (Jackson Square, Bourbon at night-ish,
+Café du Monde, the river, one interior) · PLAN.md scorecard updated honestly.
+
+---
+
 A 3D physics platformer for the web. One bear. One bow tie. One collage to finish.
 One $500 plane ticket home.
 
