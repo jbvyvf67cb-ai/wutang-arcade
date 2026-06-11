@@ -33,9 +33,13 @@ export class ChaseCamera {
     scene.activeCamera = this.camera;
   }
 
-  /** yaw the player's "camera-relative forward" derives from */
+  /** yaw the player's "camera-relative forward" derives from.
+   * ArcRotate position = target + r·(cosα·sinβ, cosβ, sinα·sinβ), so the
+   * horizontal camera-forward vector is (-cosα, -sinα) → heading -α - π/2.
+   * (The old `α + π/2` was reflected — it parked the camera beside the bear.)
+   */
   get yaw(): number {
-    return this.camera.alpha + Math.PI / 2;
+    return -this.camera.alpha - Math.PI / 2;
   }
 
   private shake = 0;
@@ -72,7 +76,7 @@ export class ChaseCamera {
 
     // auto-follow: stay behind Joshua's facing (camera forward = his forward)
     if (!this.manual) {
-      const desiredAlpha = playerFacing - Math.PI / 2;
+      const desiredAlpha = -playerFacing - Math.PI / 2;
       let diff = desiredAlpha - this.camera.alpha;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;

@@ -46,14 +46,18 @@ export class Bear {
   play(name: ClipName, loop = true, speed = 1, force = false) {
     const g = this.groups.get(name);
     if (!g) return;
+    // quantize: WebKit wedges into a stuck pose if speedRatio mutates every
+    // frame (analog movement makes raw speed continuous) — step it coarsely
+    // and only write on change
+    const q = Math.max(0.2, Math.round(speed * 5) / 5);
     if (this.currentName === name && !force) {
-      g.speedRatio = speed;
+      if (g.speedRatio !== q) g.speedRatio = q;
       // watchdog: if it silently stopped (platform hiccup, finished loop), restart
-      if (!g.isPlaying && loop) g.start(true, speed);
+      if (!g.isPlaying && loop) g.start(true, q);
       return;
     }
     this.current?.stop();
-    g.start(loop, speed);
+    g.start(loop, q);
     this.current = g;
     this.currentName = name;
   }
@@ -85,12 +89,17 @@ export class Bear {
     }
   }
 
+  private airTime = 0;
+
   updateLocomotion(dt: number, ctl: PlayerController, horizSpeed: number) {
     if (this.busy) return;
+    this.airTime = ctl.grounded || ctl.swimming ? 0 : this.airTime + dt;
     if (ctl.swimming) {
       this.play("swim", true, Math.max(0.7, horizSpeed / 3));
       this.idleTime = 0;
-    } else if (!ctl.grounded) {
+    } else if (this.airTime > 0.18) {
+      // hysteresis: 1-frame grounded flickers at speed must never flash the
+      // limp fall pose (it can stick on iOS) — only truly airborne counts
       const vy = ctl.aggregate.body.getLinearVelocity().y;
       this.play("fall", true, vy > 0.5 ? 1.4 : 1.0);
       this.idleTime = 0;
