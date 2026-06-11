@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && rm -rf dist/map/osm_raw",
     "preview": "vite preview",
     "qa": "playwright test --config qa/playwright/playwright.config.ts"
   },

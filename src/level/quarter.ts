@@ -946,6 +946,8 @@ export async function buildQuarter(scene: Scene): Promise<QuarterResult> {
         sctx.fillRect(i * 32, 0, 32, 64);
       }
       stripeTex.update();
+      stripeTex.wrapU = Texture.WRAP_ADDRESSMODE;
+      stripeTex.wrapV = Texture.WRAP_ADDRESSMODE;
       const smat = new StandardMaterial("q_stripemat", scene);
       smat.diffuseTexture = stripeTex;
       smat.emissiveColor = new Color3(0.25, 0.25, 0.25);

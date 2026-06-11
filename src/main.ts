@@ -462,6 +462,7 @@ async function boot() {
   w.__interiors = level.interiors.map((i) => ({
     key: i.def.key, label: i.def.label, isOpen: () => i.isOpen,
     inside: { x: i.insidePos.x, y: 1.2, z: i.insidePos.z },
+    door: { x: i.doorPos.x, z: i.doorPos.z },
     open: i.open,
   }));
   w.__metrics = { grooveRate: GROOVE_RATE, runSpeed: RUN_SPEED, interiors: INTERIORS.length };
